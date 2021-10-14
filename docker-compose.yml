@@ -1,0 +1,30 @@
+version: "3.9"
+   
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    env_file: .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  webapp:
+    build: .
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        python manage.py migrate
+        python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/npdb
+    ports:
+      - 8000:8000
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
