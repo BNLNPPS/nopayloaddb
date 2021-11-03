@@ -90,11 +90,11 @@ WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'dbname',
-        'USER': 'login',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
+        'USER':     os.environ.get("POSTGRES_USER",     default='login'),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
+        'HOST':     os.environ.get("POSTGRES_HOST",     default='localhost'),
+        'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
         'OPTIONS': {
             'options': '-c search_path=django'
         },
