@@ -1,17 +1,20 @@
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.response import Response
-# from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+#from rest_framework.permissions import IsAuthenticated
 
 from django.db import transaction
 
 from django.db.models import Prefetch
 from django.db.models import QuerySet
 
-from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadList, PayloadType, PayloadIOV
+from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
 # from todos.permissions import UserIsOwnerTodo
 from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagTypeSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
+#from cdb_rest.serializers import PayloadListIdSeqSerializer
+
 
 class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = GlobalTagReadSerializer
@@ -44,10 +47,10 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
 
-
-#    authentication_classes = ()
-#    permission_classes = ()
+    #authentication_classes = ()
+    #permission_classes = ()
     serializer_class = GlobalTagStatusSerializer
+    lookup_field = 'name'
 
 
     def get_queryset(self):
@@ -97,6 +100,10 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
     #    permission_classes = ()
     serializer_class = PayloadListCreateSerializer
 
+    def get_next_id(self):
+        return PayloadListIdSequence.objects.create()
+
+
     def get_queryset(self):
         return PayloadList.objects.all()
 
@@ -107,9 +114,16 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        data = request.data
+        id = self.get_next_id()
+
+        data['id'] = int(id)
+        data['name'] = data['payload_type'] + '_' + str(id)
+
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+
 
         return Response(serializer.data)
 
@@ -149,7 +163,10 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        data = request.data
+        data['payload_list'] = PayloadList.objects.values_list('id', flat=True).get(name=data['payload_list'])
+
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return Response(serializer.data)
@@ -284,3 +301,31 @@ class PayloadIOVsRangesListAPIView(ListAPIView):
             queryset = self.get_queryset()
             serializer = PayloadListReadSerializer(queryset, many=True)
             return Response(serializer.data)
+
+
+class PayloadListAttachAPIView(UpdateAPIView):
+
+    serializer_class = PayloadListCreateSerializer
+
+    def put(self, request, *args, **kwargs):
+
+        data = request.data
+
+        try:
+            pList = PayloadList.objects.get(name=data['payload_list'])
+        except:
+            return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            gTag = GlobalTag.objects.get(name=data['global_tag'])
+        except:
+            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+        pList.global_tag = GlobalTag.objects.get(name=data['global_tag'])
+
+        #print(serializer)
+        #serializer.is_valid(raise_exception=True)
+        self.perform_update(pList)
+
+        serializer = PayloadListCreateSerializer(pList)
+        return Response(serializer.data)
