@@ -119,6 +119,8 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
 
         data['id'] = int(id)
         data['name'] = data['payload_type'] + '_' + str(id)
+        #Remove GT if provided
+        data['global_tag'] = None
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -307,6 +309,7 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
     serializer_class = PayloadListCreateSerializer
 
+    @transaction.atomic
     def put(self, request, *args, **kwargs):
 
         data = request.data
@@ -319,8 +322,13 @@ class PayloadListAttachAPIView(UpdateAPIView):
             gTag = GlobalTag.objects.get(name=data['global_tag'])
         except:
             return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            plType = PayloadType.objects.get(name=data['payload_type'])
+        except:
+            return Response({"detail": "PayloadListType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+        #check if the PayloadList of the same type is already attached. If yes then detach
+        PayloadList.objects.filter(global_tag__name=data['global_tag'], payload_type=plType).update(global_tag=None)
         pList.global_tag = GlobalTag.objects.get(name=data['global_tag'])
 
         #print(serializer)
