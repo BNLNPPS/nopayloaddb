@@ -328,7 +328,7 @@ class PayloadListAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadListType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         #check if the PayloadList of the same type is already attached. If yes then detach
-        PayloadList.objects.filter(global_tag__name=data['global_tag'], payload_type=plType).update(global_tag=None)
+        PayloadList.objects.filter(global_tag=gTag, payload_type=plType).update(global_tag=None)
         pList.global_tag = GlobalTag.objects.get(name=data['global_tag'])
 
         #print(serializer)
