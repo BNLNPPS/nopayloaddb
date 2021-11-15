@@ -41,6 +41,15 @@ class PayloadListCreateSerializer(serializers.ModelSerializer):
         model = PayloadList
         fields = ("id", "name", "global_tag", "payload_type", "created")
 
+class PayloadListSerializer(serializers.ModelSerializer):
+    #global_tag = serializers.SlugRelatedField(slug_field='name',
+    #                                        queryset=GlobalTag.objects.all())
+    class Meta:
+        model = PayloadList
+        fields = ("id", "name", "global_tag", "payload_type", "created")
+        #depth = 1
+
+
 class PayloadIOVSerializer(serializers.ModelSerializer):
 
     class Meta:
