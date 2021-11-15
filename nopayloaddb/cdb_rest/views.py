@@ -1,7 +1,9 @@
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.renderers import JSONRenderer
 #from rest_framework.permissions import IsAuthenticated
+
 
 from django.db import transaction
 
@@ -13,6 +15,7 @@ from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadLi
 from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagTypeSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
+from cdb_rest.serializers import PayloadListSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 
 
@@ -166,28 +169,33 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        data['payload_list'] = PayloadList.objects.values_list('id', flat=True).get(name=data['payload_list'])
+        #pList = PayloadList.objects.values_list('id', flat=True).get(name=data['payload_list'])
+        pList = PayloadList.objects.get(name=data['payload_list'])
+        data['payload_list'] = pList.id
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return Response(serializer.data)
+        pList.save()
+        ret = serializer.data
+        ret['payload_list'] = pList.name
+        return Response(ret)
 
 
 #API to create GT. GT provided as JSON body
-class GlobalTagCreateAPIView(CreateAPIView):
-
-    serializer_class = GlobalTagCreateSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        #TODO name check
-
-        self.perform_create(serializer)
-
-        return Response(serializer.data)
+#class GlobalTagCreateAPIView(CreateAPIView):
+#
+#    serializer_class = GlobalTagCreateSerializer
+#
+#    def create(self, request, *args, **kwargs):
+#        serializer = self.get_serializer(data=request.data)
+#        serializer.is_valid(raise_exception=True)
+#
+#        #TODO name check
+#
+#        self.perform_create(serializer)
+#
+#        return Response(serializer.data)
 
 
 #GT deep copy endpoint
@@ -329,11 +337,21 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         #check if the PayloadList of the same type is already attached. If yes then detach
         PayloadList.objects.filter(global_tag=gTag, payload_type=plType).update(global_tag=None)
-        pList.global_tag = GlobalTag.objects.get(name=data['global_tag'])
+        #gTag = GlobalTag.objects.get(name=data['global_tag'])
+        pList.global_tag = gTag
 
         #print(serializer)
         #serializer.is_valid(raise_exception=True)
         self.perform_update(pList)
 
-        serializer = PayloadListCreateSerializer(pList)
-        return Response(serializer.data)
+        #Update time for the GT
+        self.perform_update(gTag)
+
+        serializer = PayloadListSerializer(pList)
+        #print(serializer.data['global_tag'])
+        #json = JSONRenderer().render(serializer.data)
+        ret = serializer.data
+        ret['global_tag'] = gTag.name
+
+        #serializer.data['global_tag'] = gTag.name
+        return Response(ret)

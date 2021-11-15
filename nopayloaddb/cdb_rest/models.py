@@ -50,6 +50,9 @@ class GlobalTag(models.Model):
     class Meta:
         db_table = u'GlobalTag'
 
+    def __str__(self):
+        return smart_unicode(self.name)
+
     def __unicode__(self):
         return smart_unicode(self.name)
 

@@ -5,7 +5,8 @@ from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsRangesListAPIView
 from cdb_rest.views import PayloadListAttachAPIView
 
 
-from cdb_rest.views import GlobalTagCreateAPIView, GlobalTagCloneAPIView
+#from cdb_rest.views import GlobalTagCreateAPIView
+from cdb_rest.views import GlobalTagCloneAPIView
 
 app_name = 'cdb_rest'
 
@@ -16,7 +17,7 @@ urlpatterns = [
     path('gttype', GlobalTagTypeCreationAPIView.as_view(), name="global_tag_type"),
 
     #Create GT
-    path('globalTag/<gtType>', GlobalTagCreateAPIView.as_view(), name="create_global_tag"),
+    #path('globalTag/<gtType>', GlobalTagCreateAPIView.as_view(), name="create_global_tag"),
     #Clone GT
     path('globalTags/<int:sourceGlobalTagId>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
 
