@@ -2,7 +2,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.renderers import JSONRenderer
-#from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
 from django.db import transaction
@@ -173,6 +173,23 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         pList = PayloadList.objects.get(name=data['payload_list'])
         data['payload_list'] = pList.id
 
+        #Check if PL is attached and unlocked
+        if pList.global_tag:
+            if pList.global_tag.status_id == 'locked':
+                return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        #Check if  timestamp is greater than the last one
+        piovs = PayloadIOV.objects.filter(payload_list = pList)
+        #print(piovs.order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True))
+        if piovs:
+            max_maj_iov, max_min_iov = piovs.order_by('-major_iov', '-minor_iov').values_list('major_iov','minor_iov')[0]
+            print("%d  %d" % (max_maj_iov, max_min_iov))
+            print("%d  %d" % (data['major_iov'], data['minor_iov']))
+            if (data['major_iov'] < max_maj_iov) or ((data['major_iov'] == max_maj_iov) and (data['minor_iov'] <= max_min_iov)):
+                err_msg = "%s PayloadIOV should be greater than: %d %d. Provided IOV: %d %d" % \
+                          (data['payload_url'], max_maj_iov, max_min_iov, data['major_iov'], data['minor_iov'])
+                return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -334,6 +351,15 @@ class PayloadListAttachAPIView(UpdateAPIView):
             plType = PayloadType.objects.get(name=data['payload_type'])
         except:
             return Response({"detail": "PayloadListType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        #check if GT is unlocked
+        if gTag.status_id == 'locked' :
+            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #check if GT is running
+        #if gTag.type_id == 'running' :
+        #    return Response({"detail": "Global Tag is running."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
         #check if the PayloadList of the same type is already attached. If yes then detach
         PayloadList.objects.filter(global_tag=gTag, payload_type=plType).update(global_tag=None)

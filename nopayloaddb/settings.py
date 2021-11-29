@@ -27,7 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -108,6 +107,13 @@ REST_FRAMEWORK = {
 #    'DEFAULT_PERMISSION_CLASSES': (
 #        'rest_framework.permissions.IsAuthenticated',
 #    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+#    'DEFAULT_AUTHENTICATION_CLASSES': (
+#        'cdb_rest.authentication.CustomJWTAuthentication',
+#    ),
+
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
@@ -129,6 +135,17 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+SIMPLE_JWT = {
+    #'SIGNING_KEY': settings.SECRET_KEY,
+    #ZZ'VERIFYING_KEY':SECRET_KEY,
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
+    'USER_ID_CLAIM': 'user_id',
+
+    #'JTI_CLAIM': 'jti',
+}
+
 
 
 # Internationalization

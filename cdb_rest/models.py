@@ -9,7 +9,7 @@ class GlobalTagStatus(models.Model):
     #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(primary_key=True, max_length=80, db_column='name', unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -25,7 +25,7 @@ class GlobalTagType(models.Model):
     #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -41,7 +41,7 @@ class GlobalTag(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id')
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(max_length=80, db_column='name', unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     status = models.ForeignKey(GlobalTagStatus, on_delete=models.CASCADE)
     type = models.ForeignKey(GlobalTagType, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
@@ -60,7 +60,7 @@ class PayloadType(models.Model):
     #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -90,7 +90,7 @@ class PayloadList(models.Model):
     id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
     #id  = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(max_length=255, db_column='name', unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     global_tag = models.ForeignKey(GlobalTag, related_name='payload_lists', on_delete=models.CASCADE, null=True)
     payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
@@ -117,7 +117,7 @@ class PayloadIOV(models.Model):
     major_iov = models.BigIntegerField(db_column='major_iov')
     minor_iov = models.BigIntegerField(db_column='minor_iov')
     payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
