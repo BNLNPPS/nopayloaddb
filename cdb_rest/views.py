@@ -1,8 +1,8 @@
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.renderers import JSONRenderer
-from rest_framework.permissions import IsAuthenticated, AllowAny
+#from rest_framework.renderers import JSONRenderer
+#from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
 from django.db import transaction
@@ -42,11 +42,28 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
+        data = request.data
+
+        try:
+            gtStatus = GlobalTagStatus.objects.get(name=data['status'])
+            data['status']= gtStatus.pk
+        except:
+            return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            gtType = GlobalTagType.objects.get(name=data['type'])
+            data['type'] = gtType.pk
+        except:
+            return Response({"detail": "GlobalTagType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        ret = serializer.data
+        ret['status'] = gtStatus.name
+        ret['type'] = gtType.name
 
-        return Response(serializer.data)
+        return Response(ret)
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
 
@@ -122,6 +139,13 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
 
         data['id'] = int(id)
         data['name'] = data['payload_type'] + '_' + str(id)
+
+        try:
+            pType = PayloadType.objects.get(name=data['payload_type'])
+            data['payload_type'] = pType.pk
+        except:
+            return Response({"detail": "PayloadType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         #Remove GT if provided
         data['global_tag'] = None
 
@@ -129,8 +153,10 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
 
+        ret = serializer.data
+        ret['payload_type'] = pType.name
 
-        return Response(serializer.data)
+        return Response(ret)
 
 class PayloadTypeListCreationAPIView(ListCreateAPIView):
     #    authentication_classes = ()
@@ -378,6 +404,7 @@ class PayloadListAttachAPIView(UpdateAPIView):
         #json = JSONRenderer().render(serializer.data)
         ret = serializer.data
         ret['global_tag'] = gTag.name
+        ret['payload_type'] = plType.name
 
         #serializer.data['global_tag'] = gTag.name
         return Response(ret)
