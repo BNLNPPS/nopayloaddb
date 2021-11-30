@@ -8,7 +8,8 @@ from rest_framework import status
 from django.db import transaction
 
 from django.db.models import Prefetch
-from django.db.models import QuerySet
+from django.db.models import Q
+#from django.db.models import QuerySet
 
 from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
 # from todos.permissions import UserIsOwnerTodo
@@ -209,8 +210,6 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         #print(piovs.order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True))
         if piovs:
             max_maj_iov, max_min_iov = piovs.order_by('-major_iov', '-minor_iov').values_list('major_iov','minor_iov')[0]
-            print("%d  %d" % (max_maj_iov, max_min_iov))
-            print("%d  %d" % (data['major_iov'], data['minor_iov']))
             if (data['major_iov'] < max_maj_iov) or ((data['major_iov'] == max_maj_iov) and (data['minor_iov'] <= max_min_iov)):
                 err_msg = "%s PayloadIOV should be greater than: %d %d. Provided IOV: %d %d" % \
                           (data['payload_url'], max_maj_iov, max_min_iov, data['major_iov'], data['minor_iov'])
@@ -294,7 +293,8 @@ class PayloadIOVsListAPIView(ListAPIView):
             minorIOV = self.request.GET.get('minorIOV')
 
             #return PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id')
-            piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True)
+            #piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True)
+            piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(Q(major_iov__lte=majorIOV)| Q(major_iov=majorIOV,minor_iov__lte=minorIOV)).order_by('payload_list_id', '-major_iov', '-minor_iov').distinct('payload_list_id').values_list('id', flat=True)
             piov_ids = list(piovs)
             piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
 
