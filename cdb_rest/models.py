@@ -6,9 +6,9 @@ from django.utils.encoding import smart_text as smart_unicode
 # from django.utils.translation import ugettext_lazy as _
 
 class GlobalTagStatus(models.Model):
-    #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
-    name = models.CharField(primary_key=True, max_length=80, db_column='name', unique=True)
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name', unique=True)
+    name = models.CharField(max_length=80, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
@@ -22,9 +22,9 @@ class GlobalTagStatus(models.Model):
         return smart_unicode(self.name)
 
 class GlobalTagType(models.Model):
-    #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
-    name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
+    name = models.CharField(max_length=80, db_column='name',unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
@@ -57,9 +57,9 @@ class GlobalTag(models.Model):
         return smart_unicode(self.name)
 
 class PayloadType(models.Model):
-    #id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
-    name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
+    name = models.CharField(max_length=80, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
