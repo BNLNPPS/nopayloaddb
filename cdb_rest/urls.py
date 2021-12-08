@@ -1,7 +1,7 @@
 from django.urls import path
 from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView, GlobalTagStatusCreationAPIView, GlobalTagTypeCreationAPIView
-from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView
-from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsRangesListAPIView
+from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
+from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView
 
 
@@ -23,9 +23,11 @@ urlpatterns = [
 
 
     path('pl', PayloadListListCreationAPIView.as_view(), name="payload_list"),
+    path('pl/<int:pk>', PayloadListDetailAPIView.as_view(), name="payload_list_detail"),
     path('pt', PayloadTypeListCreationAPIView.as_view(), name="payload_type"),
 
     path('piov', PayloadIOVListCreationAPIView.as_view(), name="payload_iov"),
+    path('piov/<int:pk>', PayloadIOVDetailAPIView.as_view(), name="payload_iov_detail"),
 
     path('pl_attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach"),
 

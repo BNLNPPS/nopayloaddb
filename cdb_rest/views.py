@@ -1,4 +1,4 @@
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
@@ -20,7 +20,8 @@ from cdb_rest.serializers import PayloadListSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 
 
-class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
+#class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
+class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
  #   permission_classes = (IsAuthenticated, UserIsOwnerTodo)
@@ -159,6 +160,10 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
 
         return Response(ret)
 
+class PayloadListDetailAPIView(RetrieveAPIView):
+    serializer_class = PayloadListCreateSerializer
+    queryset = PayloadList.objects.all()
+
 class PayloadTypeListCreationAPIView(ListCreateAPIView):
     #    authentication_classes = ()
     #    permission_classes = ()
@@ -223,6 +228,9 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         ret['payload_list'] = pList.name
         return Response(ret)
 
+class PayloadIOVDetailAPIView(RetrieveAPIView):
+    serializer_class = PayloadIOVSerializer
+    queryset = PayloadIOV.objects.all()
 
 #API to create GT. GT provided as JSON body
 #class GlobalTagCreateAPIView(CreateAPIView):
