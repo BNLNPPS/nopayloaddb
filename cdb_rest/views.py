@@ -416,3 +416,33 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         #serializer.data['global_tag'] = gTag.name
         return Response(ret)
+
+class GlobalTagChangeStatusAPIView(UpdateAPIView):
+
+    serializer_class = GlobalTagCreateSerializer
+    def get_globalTag(self):
+        globalTagName = self.kwargs.get('globalTagName')
+        return GlobalTag.objects.get(name = globalTagName)
+
+    def get_gtStatus(self):
+        gtStatus = self.kwargs.get('newStatus')
+        return GlobalTagStatus.objects.get(name=gtStatus)
+
+    #@transaction.atomic
+    def put(self, request, *args, **kwargs):
+        try:
+            gTag = self.get_globalTag()
+        except:
+            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            gtStatus = self.get_gtStatus()
+        except:
+            return Response({"detail": "GlobalTag Status not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        gTag.status = gtStatus
+        self.perform_update(gTag)
+
+        serializer = GlobalTagCreateSerializer(gTag)
+
+        return Response(serializer.data)
