@@ -6,9 +6,10 @@ from django.utils.encoding import smart_text as smart_unicode
 # from django.utils.translation import ugettext_lazy as _
 
 class GlobalTagStatus(models.Model):
-    id = models.BigIntegerField(primary_key=True, db_column='id')
-    name = models.CharField(max_length=80, db_column='name')
-    description = models.CharField(max_length=255, db_column='description')
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name', unique=True)
+    name = models.CharField(max_length=80, db_column='name', unique=True)
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -21,9 +22,10 @@ class GlobalTagStatus(models.Model):
         return smart_unicode(self.name)
 
 class GlobalTagType(models.Model):
-    id = models.BigIntegerField(primary_key=True, db_column='id')
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
     name = models.CharField(max_length=80, db_column='name',unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -37,24 +39,28 @@ class GlobalTagType(models.Model):
 
 class GlobalTag(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id')
-    id = models.AutoField(primary_key=True, db_column='id')
-    name = models.CharField(max_length=80, db_column='name')
-    description = models.CharField(max_length=255, db_column='description')
-    status = models.ForeignKey(GlobalTagStatus, on_delete=models.CASCADE, null=True)
-    type = models.ForeignKey(GlobalTagType, on_delete=models.CASCADE, null=True)
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    name = models.CharField(max_length=80, db_column='name', unique=True)
+    description = models.CharField(max_length=255, db_column='description', null=True)
+    status = models.ForeignKey(GlobalTagStatus, on_delete=models.CASCADE)
+    type = models.ForeignKey(GlobalTagType, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
     class Meta:
         db_table = u'GlobalTag'
 
+    def __str__(self):
+        return smart_unicode(self.name)
+
     def __unicode__(self):
         return smart_unicode(self.name)
 
 class PayloadType(models.Model):
-    id = models.BigIntegerField(primary_key=True, db_column='id')
-    name = models.CharField(max_length=80, db_column='name',unique=True)
-    description = models.CharField(max_length=255, db_column='description')
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
+    name = models.CharField(max_length=80, db_column='name', unique=True)
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
 
     class Meta:
@@ -66,13 +72,27 @@ class PayloadType(models.Model):
     def __unicode__(self):
         return smart_unicode(self.name)
 
+class PayloadListIdSequence(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+
+    class Meta:
+        db_table = u'PayloadListIdSequence'
+
+    def __int__(self):
+        return self.id
+    def __str__(self):
+        return smart_unicode(self.id)
+    def __unicode__(self):
+        return smart_unicode(self.id)
+
+
 class PayloadList(models.Model):
-    #id = models.BigIntegerField(primary_key=True, db_column='id')
-    id  = models.AutoField(primary_key=True, db_column='id')
-    name = models.CharField(max_length=255, db_column='name')
-    description = models.CharField(max_length=255, db_column='description')
+    id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
+    #id  = models.BigAutoField(primary_key=True, db_column='id', unique=True)
+    name = models.CharField(max_length=255, db_column='name', unique=True)
+    description = models.CharField(max_length=255, db_column='description', null=True)
     global_tag = models.ForeignKey(GlobalTag, related_name='payload_lists', on_delete=models.CASCADE, null=True)
-    payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE, null=True)
+    payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
@@ -92,12 +112,12 @@ class PayloadList(models.Model):
 
 class PayloadIOV(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id',unique=True)
-    id = models.AutoField(primary_key = True, db_column = 'id')
+    id = models.BigAutoField(primary_key = True, db_column = 'id', unique=True)
     payload_url = models.CharField(max_length=255, db_column='payload_url')
     major_iov = models.BigIntegerField(db_column='major_iov')
     minor_iov = models.BigIntegerField(db_column='minor_iov')
-    payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE, null=True)
-    description = models.CharField(max_length=255, db_column='description')
+    payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE)
+    description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
