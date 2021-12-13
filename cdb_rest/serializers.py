@@ -7,18 +7,16 @@ class GlobalTagStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTagStatus
-        fields = ("id","name","created")
+        fields = ("name","created")
 
 
 class GlobalTagTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTagType
-        fields = ("id", "name", "created")
+        fields = ("name", "created")
 
 class GlobalTagCreateSerializer(serializers.ModelSerializer):
-
-    #type = serializers.SlugRelatedField(slug_field="name", queryset=GlobalTagType.objects.all())
 
     class Meta:
         model = GlobalTag
@@ -29,13 +27,28 @@ class PayloadTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PayloadType
-        fields = ("id", "name", "created")
+        fields = ("name", "created")
+
+#class PayloadListIdSeqCreateSerializer(serializers.ModelSerializer):
+#
+#    class Meta:
+#        model = PayloadListIdSequence
+#
 
 class PayloadListCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PayloadList
         fields = ("id", "name", "global_tag", "payload_type", "created")
+
+class PayloadListSerializer(serializers.ModelSerializer):
+    #global_tag = serializers.SlugRelatedField(slug_field='name',
+    #                                        queryset=GlobalTag.objects.all())
+    class Meta:
+        model = PayloadList
+        fields = ("id", "name", "global_tag", "payload_type", "created")
+        #depth = 1
+
 
 class PayloadIOVSerializer(serializers.ModelSerializer):
 
