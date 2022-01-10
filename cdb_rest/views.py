@@ -2,7 +2,8 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from rest_framework.response import Response
 from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
-#from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from cdb_rest.authentication import CustomJWTAuthentication
 
 
 from django.db import transaction
@@ -19,18 +20,19 @@ from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 
+from cdb_rest.authentication import CustomJWTAuthentication
 
 #class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
 class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
- #   permission_classes = (IsAuthenticated, UserIsOwnerTodo)
+    #permission_classes = (IsAuthenticated, UserIsOwnerTodo)
 
 class GlobalTagListCreationAPIView(ListCreateAPIView):
 
 
-#    authentication_classes = ()
-#    permission_classes = ()
+    #authentication_classes = [CustomJWTAuthentication]
+    #permission_classes = (IsAuthenticated)
     serializer_class = GlobalTagCreateSerializer
 
 
