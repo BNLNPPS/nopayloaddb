@@ -88,7 +88,12 @@ WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        #'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
+        'POOL_OPTIONS' : {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': -1
+        },
         'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
         'USER':     os.environ.get("POSTGRES_USER",     default='login'),
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
@@ -104,15 +109,12 @@ REST_FRAMEWORK = {
 #    'DEFAULT_AUTHENTICATION_CLASSES': (
 #        'rest_framework.authentication.TokenAuthentication',
 #    ),
-#    'DEFAULT_PERMISSION_CLASSES': (
-#        'rest_framework.permissions.IsAuthenticated',
-#    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-#    'DEFAULT_AUTHENTICATION_CLASSES': (
-#        'cdb_rest.authentication.CustomJWTAuthentication',
-#    ),
+    #'DEFAULT_AUTHENTICATION_CLASSES': (
+    #    'cdb_rest.authentication.CustomJWTAuthentication',
+    #),
+    #'DEFAULT_PERMISSION_CLASSES': (
+    #    'rest_framework.permissions.IsAuthenticated',
+    #),
 
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }

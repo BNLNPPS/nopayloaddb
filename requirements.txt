@@ -10,4 +10,5 @@ requests==2.26.0
 sqlparse==0.4.2
 urllib3==1.26.7
 djangorestframework-simplejwt==5.0.0
+django-db-connection-pool[postgresql]==1.0.7
 
