@@ -89,17 +89,17 @@ WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 DATABASES = {
     'default': {
         #'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
-        'POOL_OPTIONS' : {
-            'POOL_SIZE': 10,
-            'MAX_OVERFLOW': -1
-        },
+        'ENGINE': 'django_db_geventpool.backends.postgresql_psycopg2',
+
         'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
         'USER':     os.environ.get("POSTGRES_USER",     default='login'),
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
         'HOST':     os.environ.get("POSTGRES_HOST",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
+        'CONN_MAX_AGE': 0,
         'OPTIONS': {
+            'MAX_CONNS': 50,
+            'REUSE_CONNS': 50,
             'options': '-c search_path=django,public'
         },
     }
