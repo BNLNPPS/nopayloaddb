@@ -1,6 +1,5 @@
 asgiref==3.4.1
 Django==3.2.9
-django-db-geventpool==4.0.0
 djangorestframework==3.12.4
 djangorestframework-simplejwt==5.0.0
 gevent==21.12.0
