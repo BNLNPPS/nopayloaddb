@@ -304,7 +304,7 @@ class PayloadIOVsListAPIView(ListAPIView):
 
             #return PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id')
             #piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True)
-            piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(Q(major_iov__lte=majorIOV)| Q(major_iov=majorIOV,minor_iov__lte=minorIOV)).order_by('payload_list_id', '-major_iov', '-minor_iov').distinct('payload_list_id').values_list('id', flat=True)
+            piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(Q(major_iov__lt=majorIOV)| Q(major_iov=majorIOV,minor_iov__lte=minorIOV)).order_by('payload_list_id', '-major_iov', '-minor_iov').distinct('payload_list_id').values_list('id', flat=True)
             piov_ids = list(piovs)
             piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
 
