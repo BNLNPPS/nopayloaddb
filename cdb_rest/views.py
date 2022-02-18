@@ -234,18 +234,20 @@ class PayloadIOVDetailAPIView(RetrieveAPIView):
     serializer_class = PayloadIOVSerializer
     queryset = PayloadIOV.objects.all()
 
-
 class PayloadIOVBulkCreationAPIView(CreateAPIView):
     #    authentication_classes = ()
     #    permission_classes = ()
     serializer_class = PayloadIOVSerializer
 
+    def get_queryset(self):
+        return PayloadIOV.objects.all()
+
     def create(self, request, *args, **kwargs):
         data = request.data
-        ret = PayloadIOV.objects.bulk_create(data)
+        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"], major_iov = obj["major_iov"], minor_iov = obj["minor_iov"], payload_list=PayloadList.objects.get(name=obj['payload_list']), created=None) for obj in data]
+        PayloadIOV.objects.bulk_create(batch)
 
-        return Response(ret)
-
+        return Response()
 
 #API to create GT. GT provided as JSON body
 #class GlobalTagCreateAPIView(CreateAPIView):
