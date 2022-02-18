@@ -3,7 +3,7 @@ from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView,
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
 from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView
-
+from cdb_rest.views import PayloadIOVBulkCreationAPIView
 
 #from cdb_rest.views import GlobalTagCreateAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
@@ -28,6 +28,7 @@ urlpatterns = [
 
     path('piov', PayloadIOVListCreationAPIView.as_view(), name="payload_iov"),
     path('piov/<int:pk>', PayloadIOVDetailAPIView.as_view(), name="payload_iov_detail"),
+    path('bulk_piov', PayloadIOVBulkCreationAPIView.as_view(), name="bulk_payload_iov"),
 
     path('pl_attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach"),
 
