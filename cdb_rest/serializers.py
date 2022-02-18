@@ -7,14 +7,14 @@ class GlobalTagStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTagStatus
-        fields = ("name","created")
+        fields = ("id", "name","created")
 
 
 class GlobalTagTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTagType
-        fields = ("name", "created")
+        fields = ("id", "name", "created")
 
 class GlobalTagCreateSerializer(serializers.ModelSerializer):
 
@@ -27,13 +27,7 @@ class PayloadTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PayloadType
-        fields = ("name", "created")
-
-#class PayloadListIdSeqCreateSerializer(serializers.ModelSerializer):
-#
-#    class Meta:
-#        model = PayloadListIdSequence
-#
+        fields = ("id", "name", "created")
 
 class PayloadListCreateSerializer(serializers.ModelSerializer):
 
@@ -60,6 +54,7 @@ class PayloadIOVSerializer(serializers.ModelSerializer):
 class PayloadListReadSerializer(serializers.ModelSerializer):
 
     payload_iov = PayloadIOVSerializer(many=True, read_only=True)
+    payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
 
     class Meta:
         model = PayloadList
