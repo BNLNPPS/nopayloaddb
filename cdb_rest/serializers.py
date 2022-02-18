@@ -55,6 +55,7 @@ class PayloadListReadSerializer(serializers.ModelSerializer):
 
     payload_iov = PayloadIOVSerializer(many=True, read_only=True)
     payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    global_tag = serializers.SlugRelatedField(slug_field="name", read_only=True)
 
     class Meta:
         model = PayloadList
