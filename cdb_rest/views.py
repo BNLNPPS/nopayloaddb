@@ -323,6 +323,10 @@ class PayloadIOVsListAPIView(ListAPIView):
                                                                                                      '-minor_iov').distinct(
                 'payload_list_id')
 
+            return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
+                  'payload_iov',
+                  queryset=piov_querset
+                  )).filter(payload_iov__in=piov_querset).distinct()
 
         def list(self, request):
 
