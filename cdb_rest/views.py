@@ -317,22 +317,39 @@ class PayloadIOVsListAPIView(ListAPIView):
             majorIOV = self.request.GET.get('majorIOV')
             minorIOV = self.request.GET.get('minorIOV')
 
-            #return PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id')
-            #piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName, major_iov__lte = majorIOV,minor_iov__lte=minorIOV).order_by('payload_list_id','-major_iov','-minor_iov').distinct('payload_list_id').values_list('id',flat=True)
-            piovs = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(Q(major_iov__lt=majorIOV)| Q(major_iov=majorIOV,minor_iov__lte=minorIOV)).order_by('payload_list_id', '-major_iov', '-minor_iov').distinct('payload_list_id').values_list('id', flat=True)
-            piov_ids = list(piovs)
-            piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
+            piov_querset = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
+                Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV)).order_by('payload_list_id',
+                                                                                                     '-major_iov',
+                                                                                                     '-minor_iov').distinct(
+                'payload_list_id')
 
-            return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
-                  'payload_iov',
-                  queryset=piov_querset
-                  )).filter(payload_iov__in=piov_querset).distinct()
 
         def list(self, request):
 
             queryset = self.get_queryset()
             serializer = PayloadListReadSerializer(queryset, many=True)
             return Response(serializer.data)
+
+
+class PayloadIOVsList2APIView(ListAPIView):
+
+    def get_queryset(self):
+        gtName = self.request.GET.get('gtName')
+        majorIOV = self.request.GET.get('majorIOV')
+        minorIOV = self.request.GET.get('minorIOV')
+
+        piov_querset = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
+            Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV)).order_by('payload_list_id',
+                                                                                                 '-major_iov',
+                                                                                                 '-minor_iov').distinct(
+            'payload_list_id')
+
+        return piov_querset
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = PayloadIOVSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
