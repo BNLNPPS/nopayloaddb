@@ -1,3 +1,5 @@
+import sys
+
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -204,14 +206,20 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         data = request.data
 
-        if (data['major_iov_end'] == None):
-            data['minor_iov_end'] == None
-        elif ((data['minor_iov'] == None) and (data['major_iov_end'] < data['major_iov'])):
-            data['minor_iov_end'] == None
-            err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d" % \
-                      (data['payload_url'], data['major_iov'], data['major_iov_end'])
-            return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        elif((data['major_iov_end'] < data['major_iov']) or ((data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
+        if (data['major_iov_end'] == None or data['minor_iov_end'] == None):
+            data['major_iov_end'] == sys.maxsize
+            data['minor_iov_end'] == sys.maxsize
+
+#        if (data['major_iov_end'] == None):
+#            data['minor_iov_end'] == None
+#        elif ((data['minor_iov'] == None) and (data['major_iov_end'] < data['major_iov'])):
+#            data['minor_iov_end'] == None
+#            err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d" % \
+#                      (data['payload_url'], data['major_iov'], data['major_iov_end'])
+#            return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#        elif((data['major_iov_end'] < data['major_iov']) or ((data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
+        if ((data['major_iov_end'] < data['major_iov']) or (
+                (data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
             err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
                       (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'], data['minor_iov_end'])
             return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -441,38 +449,66 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             if pList.global_tag.status_id == 'locked':
                 is_gt_locked = True
 
-        # Check if Payload with same start IOVs already attached
+
         list_piovs = PayloadIOV.objects.filter(payload_list=pList)
-
-        piovs = list_piovs.filter(major_iov = piov.major_iov, minor_iov = piov.minor_iov)
-
-        if(piovs):
-            payload_url, major_iov, minor_iov = piovs.values_list('payload_url', 'major_iov', 'minor_iov')[0]
-            err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
-                      (major_iov, minor_iov, payload_url)
-            return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         #Check if new PayloadIOV overlaps
         if(is_gt_locked):
-            #list_piovs = PayloadIOV.objects.filter(payload_list = pList)
-            piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lt = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
+
+            # Check if Payload with same start IOVs already attached
+            piovs = list_piovs.filter(major_iov=piov.major_iov, minor_iov=piov.minor_iov)
+            if (piovs):
+                payload_url, major_iov, minor_iov = piovs.values_list('payload_url', 'major_iov', 'minor_iov')[0]
+                err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
+                          (major_iov, minor_iov, payload_url)
+                return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Special case for Online GT - allow open IOV recover last open IOV
+            special_case = False
+            if(piov.major_iov == sys.maxsize and piov.minor_iov == sys.maxsize):
+                piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
+                if(piovs):
+                    major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
+                    if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
+                        special_case = True
+
+            if not special_case:
+                piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lt = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
+                if(piovs):
+                    major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
+                    if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and (piov.minor_iov < minor_iov_end)):
+                        err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided start IOVs: %d %d" % \
+                                              (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov, piov.minor_iov)
+                        return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
+                if (piovs):
+                    major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
+                    if (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and (piov.minor_iov_end > minor_iov)):
+                        err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end IOVs: %d %d" % \
+                              (piov.payload_url, major_iov, minor_iov, piov.major_iov_end, piov.minor_iov_end)
+                        return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        else:
+
+            #piovs fully recovered with inserted to be detached
+            piovs = list_piovs.filter(
+                Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)).filter(
+                Q(major_iov_end__lt=piov.major_iov_end) | Q(major_iov_end=piov.major_iov_end, minor_iov_end__lte=piov.minor_iov_end)).update(payload_list=None)
+
+            #cut the end iovs of the previous piov
+            piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lte = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
             if(piovs):
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
-                if (major_iov_end == None) or (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and ((piov.minor_iov < minor_iov_end) or (minor_iov_end == None))):
-                    err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided start IOVs: %d %d" % \
-                                          (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov, piov.minor_iov)
-                    return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and ((piov.minor_iov < minor_iov_end) or (minor_iov_end == None))):
+                    piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
 
+            # cut the starting iovs of the next piov
             piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
-
             if (piovs):
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
                 if (piov.major_iov_end == None) or (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and ((piov.minor_iov_end > minor_iov) or (piov.minor_iov_end == None))):
-                    err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end IOVs: %d %d" % \
-                          (piov.payload_url, major_iov, minor_iov, piov.major_iov_end, piov.minor_iov_end)
-                    return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+                    piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
 
         piov.payload_list = pList
 
