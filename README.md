@@ -6,7 +6,7 @@ Current release tag is 0.0.6
 git clone --depth 1 --branch 0.0.6 https://github.com/BNLNPPS/nopayloaddb /nopayloaddb
 ```
 
-This release will be deployed at Production and Tests instances when OKD will back
+This release will be deployed at Production and Tests instances when OKD back
 
 Production:
 ```
