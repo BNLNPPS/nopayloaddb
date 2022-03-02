@@ -1,9 +1,9 @@
 from django.urls import path
 from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView, GlobalTagStatusCreationAPIView, GlobalTagTypeCreationAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
-from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
+from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
-
+from cdb_rest.views import PayloadIOVBulkCreationAPIView
 
 #from cdb_rest.views import GlobalTagCreateAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
@@ -28,6 +28,7 @@ urlpatterns = [
 
     path('piov', PayloadIOVListCreationAPIView.as_view(), name="payload_iov"),
     path('piov/<int:pk>', PayloadIOVDetailAPIView.as_view(), name="payload_iov_detail"),
+    path('bulk_piov', PayloadIOVBulkCreationAPIView.as_view(), name="bulk_payload_iov"),
 
     path('pl_attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach"),
     path('piov_attach', PayloadIOVAttachAPIView.as_view(), name="payload_iov_list_attach"),
@@ -36,7 +37,8 @@ urlpatterns = [
     #get GT PayloadIOVs
     #payloads gtName , runNumber , expNumber
     #path('payloadiovs/<globalTagId>/<majorIOV>/<minorIOV>', PayloadIOVsListAPIView.as_view(), name="payload_list"),
-    path('payloadiovs/', PayloadIOVsListAPIView.as_view(), name="payload_list"),
+    path('payloadiovs/', PayloadIOVsListAPIView.as_view(), name="payloadiovs"),
+    path('payloadiovs2/', PayloadIOVsList2APIView.as_view(), name="payloadiovs2"),
     path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
 
     path('gt_change_status/<str:globalTagName>/<str:newStatus>', GlobalTagChangeStatusAPIView.as_view(), name="global_tag_change_status")
