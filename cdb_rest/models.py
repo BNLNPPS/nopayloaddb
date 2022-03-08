@@ -106,11 +106,6 @@ class PayloadList(models.Model):
     def __unicode__(self):
         return smart_unicode(self.name)
 
-#class PayloadIOV(models.Model):
-#    major_iov = models.BigIntegerField(db_column='major_iov')
-#    minor_iov = models.BigIntegerField(db_column='minor_iov')
-#    payload = models.ForeignKey(Payload, related_name='payload', on_delete=models.CASCADE, null=True)
-
 class PayloadIOV(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id',unique=True)
     id = models.BigAutoField(primary_key = True, db_column = 'id', unique=True)
@@ -126,6 +121,10 @@ class PayloadIOV(models.Model):
 
     class Meta:
         db_table = u'PayloadIOV'
+
+        indexes = [
+            models.Index(fields=['major_iov', 'minor_iov', ]),
+        ]
 
     def __str__(self):
         return smart_unicode(self.payload_url)
