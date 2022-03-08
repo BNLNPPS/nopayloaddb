@@ -46,6 +46,8 @@ class PayloadListSerializer(serializers.ModelSerializer):
 
 class PayloadIOVSerializer(serializers.ModelSerializer):
 
+    payload_list = serializers.SlugRelatedField(slug_field="name", read_only=True)
+
     class Meta:
         model = PayloadIOV
         fields = ("id", "payload_url", "major_iov", "minor_iov", "major_iov_end", "minor_iov_end", "payload_list", "inserted")
