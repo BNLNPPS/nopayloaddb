@@ -2,7 +2,7 @@ from django.urls import path
 from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView, GlobalTagStatusCreationAPIView, GlobalTagTypeCreationAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
 from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
-from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView
+from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
 
 #from cdb_rest.views import GlobalTagCreateAPIView

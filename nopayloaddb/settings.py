@@ -98,7 +98,7 @@ DATABASES = {
         'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
         'CONN_MAX_AGE': 500,
         'OPTIONS': {
-            'options': '-c search_path=django,public'
+            'options': '-c search_path= public'
         },
     }
 }
