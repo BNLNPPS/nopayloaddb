@@ -93,6 +93,7 @@ class PayloadList(models.Model):
     description = models.CharField(max_length=255, db_column='description', null=True)
     global_tag = models.ForeignKey(GlobalTag, related_name='payload_lists', on_delete=models.CASCADE, null=True)
     payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE)
+    #freeze_time = models.BigIntegerField(db_column='freeze_time', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
@@ -111,9 +112,11 @@ class PayloadIOV(models.Model):
     payload_url = models.CharField(max_length=255, db_column='payload_url')
     major_iov = models.BigIntegerField(db_column='major_iov')
     minor_iov = models.BigIntegerField(db_column='minor_iov')
-    payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE)
+    major_iov_end = models.BigIntegerField(db_column='major_iov_end')
+    minor_iov_end = models.BigIntegerField(db_column='minor_iov_end')
+    payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE, null=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
-    created = models.DateTimeField(auto_now_add=True, db_column='created')
+    inserted = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
     class Meta:

@@ -31,6 +31,7 @@ urlpatterns = [
     path('bulk_piov', PayloadIOVBulkCreationAPIView.as_view(), name="bulk_payload_iov"),
 
     path('pl_attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach"),
+    path('piov_attach', PayloadIOVAttachAPIView.as_view(), name="payload_iov_list_attach"),
 
 
     #get GT PayloadIOVs
