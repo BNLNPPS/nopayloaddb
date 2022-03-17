@@ -249,7 +249,8 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"], major_iov = obj["major_iov"], minor_iov = obj["minor_iov"], payload_list=PayloadList.objects.get(name=obj['payload_list']), created=None) for obj in data]
+        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"], major_iov = obj["major_iov"], minor_iov = obj["minor_iov"], major_iov_end = sys.maxsize, minor_iov_end = sys.maxsize, payload_list=PayloadList.objects.get(name=obj['payload_list']), inserted=None) for obj in data]
+
         PayloadIOV.objects.bulk_create(batch)
 
         return Response()
