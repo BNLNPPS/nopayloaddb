@@ -527,7 +527,6 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         else:
-
             #piovs fully recovered with inserted to be detached
             piovs = list_piovs.filter(
                 Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)).filter(
@@ -538,14 +537,20 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             if(piovs):
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
                 if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and ((piov.minor_iov < minor_iov_end) or (minor_iov_end == None))):
-                    piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
+                    #piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
+                    piovs[0].major_iov_end = piov.major_iov
+                    piovs[0].minor_iov_end = piov.minor_iov
+                    piovs[0].save(update_fields=['major_iov_end','minor_iov_end'])
 
             # cut the starting iovs of the next piov
             piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
             if (piovs):
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
                 if (piov.major_iov_end == None) or (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and ((piov.minor_iov_end > minor_iov) or (piov.minor_iov_end == None))):
-                    piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
+                    #piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
+                    piovs[0].major_iov_end = piov.major_iov
+                    piovs[0].minor_iov_end = piov.minor_iov
+                    piovs[0].save(update_fields=['major_iov_end','minor_iov_end'])
 
         piov.payload_list = pList
 
