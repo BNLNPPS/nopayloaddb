@@ -425,13 +425,12 @@ class PayloadListAttachAPIView(UpdateAPIView):
             gTag = GlobalTag.objects.get(name=data['global_tag'])
         except:
             return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        try:
-            plType = PayloadType.objects.get(name=data['payload_type'])
-        except:
-            return Response({"detail": "PayloadListType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        plType = pList.payload_type
 
         #check if GT is unlocked
-        if gTag.status_id == 'locked' :
+        gtStatus = GlobalTagStatus.objects.get(id=gTag.status_id)
+        if gtStatus.name == 'locked' :
             return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         #check if GT is running
         #if gTag.type_id == 'running' :
