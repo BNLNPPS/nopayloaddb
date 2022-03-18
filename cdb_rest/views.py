@@ -548,9 +548,9 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
                 if (piov.major_iov_end == None) or (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and ((piov.minor_iov_end > minor_iov) or (piov.minor_iov_end == None))):
                     #piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
-                    piovs[0].major_iov_end = piov.major_iov
-                    piovs[0].minor_iov_end = piov.minor_iov
-                    piovs[0].save(update_fields=['major_iov_end','minor_iov_end'])
+                    piovs[0].major_iov = piov.major_iov_end
+                    piovs[0].minor_iov = piov.minor_iov_end
+                    piovs[0].save(update_fields=['major_iov','minor_iov'])
 
         piov.payload_list = pList
 
