@@ -209,7 +209,7 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         if 'major_iov_end' not in data:
             data['major_iov_end'] = sys.maxsize
         if 'minor_iov_end' not in data:
-            data['major_iov_end'] = sys.maxsize
+            data['minor_iov_end'] = sys.maxsize
 
 #        if (data['major_iov_end'] == None):
 #            data['minor_iov_end'] == None
