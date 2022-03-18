@@ -206,9 +206,10 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         data = request.data
 
-        if (data['major_iov_end'] == None or data['minor_iov_end'] == None):
-            data['major_iov_end'] == sys.maxsize
-            data['minor_iov_end'] == sys.maxsize
+    if 'major_iov_end' not in data:
+        data['major_iov_end'] = sys.maxsize
+    if 'minor_iov_end' not in data:
+        data['major_iov_end'] = sys.maxsize
 
 #        if (data['major_iov_end'] == None):
 #            data['minor_iov_end'] == None
