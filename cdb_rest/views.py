@@ -16,7 +16,7 @@ from django.db.models import Q
 
 from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
 # from todos.permissions import UserIsOwnerTodo
-from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagTypeSerializer
+from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagTypeSerializer, GlobalTagListSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer
@@ -70,6 +70,21 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         ret['type'] = gtType.name
 
         return Response(ret)
+
+class GlobalTagsListAPIView(ListAPIView):
+
+    serializer_class = GlobalTagListSerializer
+
+    def get_queryset(self):
+        return GlobalTag.objects.all()
+
+    def list(self, request):
+        # Note the use of `get_queryset()` instead of `self.queryset`
+        queryset = self.get_queryset()
+        serializer = GlobalTagListSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
 
