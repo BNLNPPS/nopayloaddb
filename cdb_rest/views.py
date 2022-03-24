@@ -552,11 +552,30 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lte = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
             if(piovs):
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
+
                 if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and ((piov.minor_iov < minor_iov_end) or (minor_iov_end == None))):
                     #piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
+
                     piovs[0].major_iov_end = piov.major_iov
                     piovs[0].minor_iov_end = piov.minor_iov
                     piovs[0].save(update_fields=['major_iov_end','minor_iov_end'])
+
+                #Check if the new IOV is inserted inside the old one
+                if (piov.major_iov_end < major_iov_end) or ((piov.major_iov_end == major_iov_end) and (piov.minor_iov_end < minor_iov_end) ):
+                    #Create 3rd IOV same URL as 1st A-B(inserted)-A
+
+                    third_piov = piovs[0]
+                    third_piov.major_iov = piov.major_iov_end
+                    third_piov.minor_iov = piov.minor_iov_end
+                    third_piov.major_iov_end = major_iov_end
+                    third_piov.minor_iov_end = minor_iov_end
+                    third_piov.id = None
+                    third_piov.save()
+
+                    #serializer = self.get_serializer(data=third_piov)
+                    #serializer.is_valid(raise_exception=True)
+                    #self.perform_create(third_piov)
+
 
             # cut the starting iovs of the next piov
             piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
