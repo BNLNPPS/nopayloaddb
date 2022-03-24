@@ -496,9 +496,10 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         is_gt_locked = False
-        # Check if PL is attached and unlocked
+        # Check if PL is attached and GT is unlocked
         if pList.global_tag:
-            if pList.global_tag.status_id == 'locked':
+            gtStatus = GlobalTagStatus.objects.get(id=pList.global_tag.status_id)
+            if gtStatus.name == 'locked':
                 is_gt_locked = True
 
 
