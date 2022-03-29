@@ -87,7 +87,7 @@ class GlobalTagsListAPIView(ListAPIView):
 
 class GlobalTagsPayloadListsListAPIView(ListAPIView):
 
-    serializer_class = PayloadListReadSerializer
+    #serializer_class = PayloadListReadSerializer
 
     def get_queryset(self):
         gtName = self.kwargs.get('globalTagName')
@@ -97,9 +97,11 @@ class GlobalTagsPayloadListsListAPIView(ListAPIView):
         # Note the use of `get_queryset()` instead of `self.queryset`
         print("TEST")
         queryset = self.get_queryset()
-        ret = []
-        if queryset:
-            ret = [pl['name'] for pl in queryset.values('name')]
+        serializer = PayloadListReadSerializer(queryset, many=True)
+        ret = {}
+        if serializer.data:
+            for pl in serializer.data:
+                ret[pl['payload_type']] = pl['name']
 
         return Response(ret)
 
