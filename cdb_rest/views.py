@@ -514,7 +514,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end  = piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end' )[0]
                 #err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
                 #          (major_iov, minor_iov, payload_url)
-                err_msg = "GT is LOCKED. You inserting IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                           (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
                 return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -534,7 +534,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and (piov.minor_iov < minor_iov_end)):
                         #err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided start IOVs: %d %d" % \
                         #                      (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov, piov.minor_iov)
-                        err_msg = "GT is LOCKED. You inserting IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -545,7 +545,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     if (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and (piov.minor_iov_end > minor_iov)):
                         #err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end IOVs: %d %d" % \
                         #      (piov.payload_url, major_iov, minor_iov, piov.major_iov_end, piov.minor_iov_end)
-                        err_msg = "GT is LOCKED. You inserting IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
