@@ -85,6 +85,25 @@ class GlobalTagsListAPIView(ListAPIView):
 
         return Response(serializer.data)
 
+class GlobalTagsPayloadListsListAPIView(ListAPIView):
+
+    serializer_class = PayloadListReadSerializer
+
+    def get_queryset(self):
+        gtName = self.kwargs.get('globalTagName')
+        return PayloadList.objects.filter(global_tag__name = gtName)
+
+    def list(self, request, *args, **kwargs):
+        # Note the use of `get_queryset()` instead of `self.queryset`
+        print("TEST")
+        queryset = self.get_queryset()
+        ret = []
+        if queryset:
+            ret = [pl['name'] for pl in queryset.values('name')]
+
+        return Response(ret)
+
+
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
 
