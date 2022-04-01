@@ -75,7 +75,22 @@ class GlobalTagReadSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "status", "type", "payload_lists", "created", "updated")
         depth = 1
 
+class GlobalTagListSerializer(serializers.ModelSerializer):
 
+    payload_lists_count = serializers.SerializerMethodField()
+    payload_iov_count = serializers.SerializerMethodField()
+    status = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+
+    class Meta:
+        model = GlobalTag
+        fields = ("id", "name", "status", "type", "payload_lists_count", "payload_iov_count", "created", "updated")
+
+    def get_payload_lists_count(self, obj):
+        return obj.payload_lists.count()
+
+    def get_payload_iov_count(self, obj):
+        return PayloadIOV.objects.filter(payload_list__in=obj.payload_lists.all()).count()
 
 
 
