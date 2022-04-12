@@ -541,7 +541,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
 
             # Special case for Online GT - allow open IOV recover last open IOV
             special_case = False
-            if(piov.major_iov == sys.maxsize and piov.minor_iov == sys.maxsize):
+            if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
                 piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
                 if(piovs):
                     major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
