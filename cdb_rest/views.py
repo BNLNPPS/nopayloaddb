@@ -256,7 +256,7 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
 #            return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #        elif((data['major_iov_end'] < data['major_iov']) or ((data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
         if ((data['major_iov_end'] < data['major_iov']) or (
-                (data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
+                (data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] <= data['minor_iov']))):
             err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
                       (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'], data['minor_iov_end'])
             return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -541,11 +541,13 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
 
             # Special case for Online GT - allow open IOV recover last open IOV
             special_case = False
-            if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
+            #if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
+            if((piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize):
                 piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
                 if(piovs):
                     major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
-                    if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
+                    #if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
+                    if ((major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize):
                         special_case = True
 
             if not special_case:
