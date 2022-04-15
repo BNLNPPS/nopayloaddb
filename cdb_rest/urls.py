@@ -22,7 +22,8 @@ urlpatterns = [
     #Create GT
     #path('globalTag/<gtType>', GlobalTagCreateAPIView.as_view(), name="create_global_tag"),
     #Clone GT
-    path('globalTags/<int:sourceGlobalTagId>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
+    #path('globalTags/<int:sourceGlobalTagId>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
+    path('cloneGlobalTag/<str:globalTagName>/<str:cloneName>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
 
 
     path('pl', PayloadListListCreationAPIView.as_view(), name="payload_list"),
