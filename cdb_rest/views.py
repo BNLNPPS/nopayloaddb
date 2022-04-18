@@ -6,6 +6,7 @@ from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from cdb_rest.authentication import CustomJWTAuthentication
+from django.shortcuts import get_object_or_404
 
 
 from django.db import transaction
@@ -29,6 +30,17 @@ class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
     #permission_classes = (IsAuthenticated, UserIsOwnerTodo)
+
+class GlobalTagByNameDetailAPIView(RetrieveAPIView):
+    serializer_class = GlobalTagReadSerializer
+    queryset = GlobalTag.objects.all()
+    lookup_url_kwarg = 'globalTagName'
+
+    def get_object(self):
+        gtName = self.kwargs.get('globalTagName')
+        queryset = GlobalTag.objects.all()
+        obj = get_object_or_404(queryset, name=gtName)
+        return obj
 
 class GlobalTagListCreationAPIView(ListCreateAPIView):
 
