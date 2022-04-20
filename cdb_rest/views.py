@@ -6,6 +6,7 @@ from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from cdb_rest.authentication import CustomJWTAuthentication
+from django.shortcuts import get_object_or_404
 
 
 from django.db import transaction
@@ -29,6 +30,17 @@ class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
     #permission_classes = (IsAuthenticated, UserIsOwnerTodo)
+
+class GlobalTagByNameDetailAPIView(RetrieveAPIView):
+    serializer_class = GlobalTagReadSerializer
+    queryset = GlobalTag.objects.all()
+    lookup_url_kwarg = 'globalTagName'
+
+    def get_object(self):
+        gtName = self.kwargs.get('globalTagName')
+        queryset = GlobalTag.objects.all()
+        obj = get_object_or_404(queryset, name=gtName)
+        return obj
 
 class GlobalTagListCreationAPIView(ListCreateAPIView):
 
@@ -95,7 +107,6 @@ class GlobalTagsPayloadListsListAPIView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         # Note the use of `get_queryset()` instead of `self.queryset`
-        print("TEST")
         queryset = self.get_queryset()
         serializer = PayloadListReadSerializer(queryset, many=True)
         ret = {}
@@ -315,8 +326,11 @@ class GlobalTagCloneAPIView(CreateAPIView):
     serializer_class = GlobalTagReadSerializer
 
     def get_globalTag(self):
-        sourceGlobalTagId = self.kwargs.get('sourceGlobalTagId')
-        return GlobalTag.objects.get(pk = sourceGlobalTagId)
+        sourceGlobalTagName = self.kwargs.get('globalTagName')
+        return GlobalTag.objects.get(name = sourceGlobalTagName)
+
+    def get_cloneName(self):
+        return self.kwargs.get('cloneName')
 
     def get_payloadLists(self, globalTag):
         return PayloadList.objects.filter(global_tag=globalTag)
@@ -324,18 +338,24 @@ class GlobalTagCloneAPIView(CreateAPIView):
     def get_payloadIOVs(self, payloadList):
         return PayloadIOV.objects.filter(payload_list=payloadList)
 
+    def get_next_id(self):
+        return PayloadListIdSequence.objects.create()
+
     @transaction.atomic
-    def create(self, request, sourceGlobalTagId):
+    def create(self, request, globalTagName, cloneName):
         globalTag = self.get_globalTag()
         payloadLists = self.get_payloadLists(globalTag)
 
         globalTag.id = None
-        globalTag.name = 'COPY_OF_'+ globalTag.name
+        globalTag.name = self.get_cloneName()
+        globalTag.status = GlobalTagStatus.objects.get(name='unlocked')
         self.perform_create(globalTag)
 
         for pList in payloadLists:
             payloadIOVs = self.get_payloadIOVs(pList)
-            pList.id = None
+            plid = self.get_next_id()
+            pList.id = plid
+            pList.name = str(pList.payload_type) + '_' + str(plid)
             pList.global_tag = globalTag
             self.perform_create(pList)
             rp = []
