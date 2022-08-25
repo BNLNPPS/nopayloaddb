@@ -122,9 +122,9 @@ class PayloadIOV(models.Model):
     class Meta:
         db_table = u'PayloadIOV'
 
-        #indexes = [
-        #    models.Index(fields=['major_iov', 'minor_iov', ]),
-        #]
+        indexes = [
+            models.Index(fields=['major_iov', 'minor_iov', ]),
+        ]
 
     def __str__(self):
         return smart_unicode(self.payload_url)
