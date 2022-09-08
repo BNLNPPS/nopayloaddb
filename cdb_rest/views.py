@@ -15,9 +15,9 @@ from django.db.models import Prefetch
 from django.db.models import Q
 #from django.db.models import QuerySet
 
-from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
+from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
 # from todos.permissions import UserIsOwnerTodo
-from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagTypeSerializer, GlobalTagListSerializer
+from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagListSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer
@@ -64,14 +64,9 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
         try:
             gtStatus = GlobalTagStatus.objects.get(name=data['status'])
-            data['status']= gtStatus.pk
+            data['status']= gtStatus.pkGlobalTagsListAPIView
         except:
             return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        try:
-            gtType = GlobalTagType.objects.get(name=data['type'])
-            data['type'] = gtType.pk
-        except:
-            return Response({"detail": "GlobalTagType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
         serializer = self.get_serializer(data=request.data)
@@ -79,7 +74,6 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         self.perform_create(serializer)
         ret = serializer.data
         ret['status'] = gtStatus.name
-        ret['type'] = gtType.name
 
         return Response(ret)
 
@@ -133,31 +127,6 @@ class GlobalTagStatusCreationAPIView(ListCreateAPIView):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = GlobalTagStatusSerializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-
-        return Response(serializer.data)
-
-
-class GlobalTagTypeCreationAPIView(ListCreateAPIView):
-
-
-#    authentication_classes = ()
-#    permission_classes = ()
-    serializer_class = GlobalTagTypeSerializer
-
-
-    def get_queryset(self):
-        return GlobalTagType.objects.all()
-
-    def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
-        queryset = self.get_queryset()
-        serializer = GlobalTagTypeSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):

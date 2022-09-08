@@ -21,21 +21,6 @@ class GlobalTagStatus(models.Model):
     def __unicode__(self):
         return smart_unicode(self.name)
 
-class GlobalTagType(models.Model):
-    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
-    name = models.CharField(max_length=80, db_column='name',unique=True)
-    description = models.CharField(max_length=255, db_column='description', null=True)
-    created = models.DateTimeField(auto_now_add=True, db_column='created')
-
-    class Meta:
-        db_table = u'GlobalTagType'
-
-    def __str__(self):
-        return smart_unicode(self.name)
-
-    def __unicode__(self):
-        return smart_unicode(self.name)
 
 class GlobalTag(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id')
@@ -43,7 +28,6 @@ class GlobalTag(models.Model):
     name = models.CharField(max_length=80, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     status = models.ForeignKey(GlobalTagStatus, on_delete=models.CASCADE)
-    type = models.ForeignKey(GlobalTagType, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
