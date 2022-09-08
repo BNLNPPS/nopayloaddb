@@ -1,6 +1,6 @@
 # from django.contrib.auth.models import User
 from rest_framework import serializers
-from cdb_rest.models import GlobalTag, GlobalTagStatus, GlobalTagType, PayloadType, PayloadList, PayloadIOV
+from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadType, PayloadList, PayloadIOV
 
 
 class GlobalTagStatusSerializer(serializers.ModelSerializer):
@@ -10,17 +10,11 @@ class GlobalTagStatusSerializer(serializers.ModelSerializer):
         fields = ("id", "name","created")
 
 
-class GlobalTagTypeSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = GlobalTagType
-        fields = ("id", "name", "created")
-
 class GlobalTagCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "status", "type", "created", "updated")
+        fields = ("id", "name", "status", "created", "updated")
         #depth = 1
 
 class PayloadTypeSerializer(serializers.ModelSerializer):
@@ -67,12 +61,11 @@ class PayloadListReadSerializer(serializers.ModelSerializer):
 
 class GlobalTagReadSerializer(serializers.ModelSerializer):
 
-    #type = serializers.SlugRelatedField(slug_field="name", queryset=GlobalTagType.objects.all())
     payload_lists = PayloadListReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "status", "type", "payload_lists", "created", "updated")
+        fields = ("id", "name", "status", "payload_lists", "created", "updated")
         depth = 1
 
 class GlobalTagListSerializer(serializers.ModelSerializer):
