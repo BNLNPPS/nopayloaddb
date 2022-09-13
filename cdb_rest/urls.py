@@ -16,7 +16,6 @@ urlpatterns = [
     path('gt/<int:pk>', GlobalTagDetailAPIView.as_view(), name="global_tag_detail"),
     path('globalTag/<str:globalTagName>', GlobalTagByNameDetailAPIView.as_view(), name="global_tag_detail"),
     path('gtstatus', GlobalTagStatusCreationAPIView.as_view(), name="global_tag_status"),
-    path('gttype', GlobalTagTypeCreationAPIView.as_view(), name="global_tag_type"),
     path('globalTags', GlobalTagsListAPIView.as_view(), name="global_tags_list"),
     path('gtPayloadLists/<str:globalTagName>', GlobalTagsPayloadListsListAPIView.as_view(), name="global_tag_payload_lists"),
 
