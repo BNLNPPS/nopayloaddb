@@ -73,6 +73,25 @@ TEMPLATES = [
     },
 ]
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/var/log/django.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
 
@@ -91,8 +110,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
 
 
-        'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
-        'USER':     os.environ.get("POSTGRES_USER",     default='login'),
+        'NAME':     os.environ.get("POSTGRES_DB",       default='django'),
+        'USER':     os.environ.get("POSTGRES_USER",     default='ruslan'),
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
         'HOST':     os.environ.get("POSTGRES_HOST",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
