@@ -72,6 +72,12 @@ TEMPLATES = [
         },
     },
 ]
+import socket
+
+try:
+    HOSTNAME = socket.gethostname()
+except:
+    HOSTNAME = 'localhost'
 
 LOGGING = {
     'version': 1,
@@ -80,13 +86,13 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/var/log/django.log',
+            'filename': '/var/log/django/django-{}.log'.format(HOSTNAME),
         },
     },
     'loggers': {
         'django': {
             'handlers': ['file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
     },
