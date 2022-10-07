@@ -79,6 +79,8 @@ try:
 except:
     HOSTNAME = 'localhost'
 
+LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -86,7 +88,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/var/log/current_logs/django-{}.log'.format(HOSTNAME),
+            'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
         },
     },
     'loggers': {
