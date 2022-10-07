@@ -86,7 +86,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/var/log/django/django-{}.log'.format(HOSTNAME),
+            'filename': '/var/log/current_logs/django-{}.log'.format(HOSTNAME),
         },
     },
     'loggers': {
