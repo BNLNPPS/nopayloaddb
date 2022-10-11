@@ -25,7 +25,7 @@ SECRET_KEY = 'changetosomething'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -72,6 +72,33 @@ TEMPLATES = [
         },
     },
 ]
+import socket
+
+try:
+    HOSTNAME = socket.gethostname()
+except:
+    HOSTNAME = 'localhost'
+
+LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
