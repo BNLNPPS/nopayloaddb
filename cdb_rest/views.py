@@ -64,7 +64,7 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
         try:
             gtStatus = GlobalTagStatus.objects.get(name=data['status'])
-            data['status']= gtStatus.pkGlobalTagsListAPIView
+            data['status']= gtStatus.pk
         except:
             return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
