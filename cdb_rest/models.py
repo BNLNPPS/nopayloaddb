@@ -26,6 +26,7 @@ class GlobalTag(models.Model):
     #id = models.BigIntegerField(primary_key=True, db_column='id')
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(max_length=80, db_column='name', unique=True)
+    author = models.CharField(max_length=80, db_column='author', null=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     status = models.ForeignKey(GlobalTagStatus, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
