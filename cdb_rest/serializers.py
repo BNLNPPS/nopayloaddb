@@ -85,6 +85,14 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
     def get_payload_iov_count(self, obj):
         return PayloadIOV.objects.filter(payload_list__in=obj.payload_lists.all()).count()
 
+class PayloadListReadShortSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PayloadList
+        fields = ("payload_type", "name")
+
+
+
 
 
 

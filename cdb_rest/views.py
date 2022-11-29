@@ -20,7 +20,7 @@ from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType
 from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagListSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
-from cdb_rest.serializers import PayloadListSerializer
+from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 
 from cdb_rest.authentication import CustomJWTAuthentication
@@ -102,14 +102,13 @@ class GlobalTagsPayloadListsListAPIView(ListAPIView):
     def list(self, request, *args, **kwargs):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
-        serializer = PayloadListReadSerializer(queryset, many=True)
+        serializer = PayloadListReadShortSerializer(queryset, many=True)
         ret = {}
         if serializer.data:
             for pl in serializer.data:
                 ret[pl['payload_type']] = pl['name']
 
         return Response(ret)
-
 
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
