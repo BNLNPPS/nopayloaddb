@@ -87,6 +87,8 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
 
 class PayloadListReadShortSerializer(serializers.ModelSerializer):
 
+    payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+
     class Meta:
         model = PayloadList
         fields = ("payload_type", "name")
