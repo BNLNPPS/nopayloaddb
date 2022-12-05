@@ -5,6 +5,7 @@ from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreati
 from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
+from cdb_rest.views import GlobalTagDeleteAPIView
 
 #from cdb_rest.views import GlobalTagCreateAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
@@ -15,6 +16,9 @@ urlpatterns = [
     path('gt', GlobalTagListCreationAPIView.as_view(), name="global_tag"),
     path('gt/<int:pk>', GlobalTagDetailAPIView.as_view(), name="global_tag_detail"),
     path('globalTag/<str:globalTagName>', GlobalTagByNameDetailAPIView.as_view(), name="global_tag_detail"),
+    #DELETE GT
+    path('deleteGlobalTag/<str:globalTagName>', GlobalTagDeleteAPIView.as_view(), name="global_tag_delete"),
+
     path('gtstatus', GlobalTagStatusCreationAPIView.as_view(), name="global_tag_status"),
     path('globalTags', GlobalTagsListAPIView.as_view(), name="global_tags_list"),
     path('gtPayloadLists/<str:globalTagName>', GlobalTagsPayloadListsListAPIView.as_view(), name="global_tag_payload_lists"),
