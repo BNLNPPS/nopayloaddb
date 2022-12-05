@@ -86,7 +86,6 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
     lookup_url_kwarg = 'globalTagName'
     lookup_field = 'name'
 
-
     def get_queryset(self):
         #queryset = GlobalTag.objects.filter(name = self.request.user., id=self.kwargs['pk'])
         print(self.kwargs['globalTagName'])
@@ -94,17 +93,10 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         return queryset
 
     def destroy(self, request, *args, **kwargs):
-        print('TEST1')
         gt = self.get_object()
-        print('TEST')
-        print(gt.name)
-        #if instance.is_default == True:
-        #    return Response("Cannot delete default system category", status=status.HTTP_400_BAD_REQUEST)
         ret = self.perform_destroy(gt)
 
-
         return Response(ret)
-
 
 
 class GlobalTagsListAPIView(ListAPIView):
