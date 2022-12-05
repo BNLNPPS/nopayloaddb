@@ -93,8 +93,12 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         return queryset
 
     def destroy(self, request, *args, **kwargs):
-        gt = self.get_object()
-        ret = self.perform_destroy(gt)
+        gTag = self.get_object()
+        #check if GT is unlocked
+        gtStatus = GlobalTagStatus.objects.get(id=gTag.status_id)
+        if gtStatus.name == 'locked' :
+            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        ret = self.perform_destroy(gTag)
 
         return Response(ret)
 
