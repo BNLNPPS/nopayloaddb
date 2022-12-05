@@ -1,6 +1,7 @@
 import sys
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
+from rest_framework.generics import DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
@@ -76,6 +77,35 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         ret['status'] = gtStatus.name
 
         return Response(ret)
+
+
+class GlobalTagDeleteAPIView(DestroyAPIView):
+
+    serializer_class = GlobalTagReadSerializer
+    #permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = 'globalTagName'
+    lookup_field = 'name'
+
+
+    def get_queryset(self):
+        #queryset = GlobalTag.objects.filter(name = self.request.user., id=self.kwargs['pk'])
+        print(self.kwargs['globalTagName'])
+        queryset = GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
+        return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        print('TEST1')
+        gt = self.get_object()
+        print('TEST')
+        print(gt.name)
+        #if instance.is_default == True:
+        #    return Response("Cannot delete default system category", status=status.HTTP_400_BAD_REQUEST)
+        self.perform_destroy(gt)
+
+
+        return Response(ret)
+
+
 
 class GlobalTagsListAPIView(ListAPIView):
 
