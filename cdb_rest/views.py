@@ -100,7 +100,7 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         print(gt.name)
         #if instance.is_default == True:
         #    return Response("Cannot delete default system category", status=status.HTTP_400_BAD_REQUEST)
-        self.perform_destroy(gt)
+        ret = self.perform_destroy(gt)
 
 
         return Response(ret)
