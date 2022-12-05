@@ -87,10 +87,7 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
     lookup_field = 'name'
 
     def get_queryset(self):
-        #queryset = GlobalTag.objects.filter(name = self.request.user., id=self.kwargs['pk'])
-        print(self.kwargs['globalTagName'])
-        queryset = GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
-        return queryset
+        return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
 
     def destroy(self, request, *args, **kwargs):
         gTag = self.get_object()
@@ -99,6 +96,8 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         if gtStatus.name == 'locked' :
             return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(gTag)
+        if not ret:
+            ret = {"detail": "Global tag %s deleted." % (gTag.name)}
 
         return Response(ret)
 
