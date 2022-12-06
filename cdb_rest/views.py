@@ -14,6 +14,7 @@ from django.db import transaction
 
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.db.models import Max
 #from django.db.models import QuerySet
 
 from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
@@ -411,6 +412,42 @@ class PayloadIOVsList2APIView(ListAPIView):
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
 
+class PayloadIOVsListFastAPIView(ListAPIView):
+
+    def get_queryset(self):
+
+        gtName = self.request.GET.get('gtName')
+        majorIOV = self.request.GET.get('majorIOV')
+        minorIOV = self.request.GET.get('minorIOV')
+
+        #print("TEST")
+        #max_miov=PayloadIOV.objects.aggregate(Max('minor_iov'))
+        #print(max_miov)
+        #max_miov=PayloadIOV.objects.latest('major_iov','minor_iov').minor_iov
+        #print(max_miov)
+
+        plists = PayloadList.objects.filter(global_tag__name=gtName)
+        piov_ids = []
+        for pl in plists:
+
+            piovs = PayloadIOV.objects.filter(payload_list=pl).filter(
+                Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV))
+
+            piov_ids.append(piovs.latest('major_iov','minor_iov').id)
+
+        piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
+
+        return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
+            'payload_iov',
+            queryset=piov_querset
+        )).filter(payload_iov__in=piov_querset).distinct()
+
+
+    def list(self, request):
+
+        queryset = self.get_queryset()
+        serializer = PayloadListReadSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
