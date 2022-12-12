@@ -420,20 +420,14 @@ class PayloadIOVsListFastAPIView(ListAPIView):
         majorIOV = self.request.GET.get('majorIOV')
         minorIOV = self.request.GET.get('minorIOV')
 
-        #print("TEST")
-        #max_miov=PayloadIOV.objects.aggregate(Max('minor_iov'))
-        #print(max_miov)
-        #max_miov=PayloadIOV.objects.latest('major_iov','minor_iov').minor_iov
-        #print(max_miov)
-
         plists = PayloadList.objects.filter(global_tag__name=gtName)
         piov_ids = []
         for pl in plists:
 
-            piovs = PayloadIOV.objects.filter(payload_list=pl).filter(
+            piov = PayloadIOV.objects.filter(payload_list=pl).filter(
                 Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV))
-
-            piov_ids.append(piovs.latest('major_iov','minor_iov').id)
+            if piov:
+                piov_ids.append(piov.latest('major_iov','minor_iov').id)
 
         piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
 
