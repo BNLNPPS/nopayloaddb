@@ -14,7 +14,7 @@ class GlobalTagCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "status", "created", "updated")
+        fields = ("id", "name", "author", "status", "created", "updated")
         #depth = 1
 
 class PayloadTypeSerializer(serializers.ModelSerializer):
@@ -65,7 +65,7 @@ class GlobalTagReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "status", "payload_lists", "created", "updated")
+        fields = ("id", "name", "author", "status", "payload_lists", "created", "updated")
         depth = 1
 
 class GlobalTagListSerializer(serializers.ModelSerializer):
@@ -77,13 +77,23 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "status", "type", "payload_lists_count", "payload_iov_count", "created", "updated")
+        fields = ("id", "name", "author", "status", "type", "payload_lists_count", "payload_iov_count", "created", "updated")
 
     def get_payload_lists_count(self, obj):
         return obj.payload_lists.count()
 
     def get_payload_iov_count(self, obj):
         return PayloadIOV.objects.filter(payload_list__in=obj.payload_lists.all()).count()
+
+class PayloadListReadShortSerializer(serializers.ModelSerializer):
+
+    payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+
+    class Meta:
+        model = PayloadList
+        fields = ("payload_type", "name")
+
+
 
 
 

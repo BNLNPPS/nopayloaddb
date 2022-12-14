@@ -1,6 +1,7 @@
 import sys
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
+from rest_framework.generics import DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
 #from rest_framework.renderers import JSONRenderer
@@ -13,6 +14,7 @@ from django.db import transaction
 
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.db.models import Max
 #from django.db.models import QuerySet
 
 from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
@@ -20,7 +22,7 @@ from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType
 from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagListSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
-from cdb_rest.serializers import PayloadListSerializer
+from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 
 from cdb_rest.authentication import CustomJWTAuthentication
@@ -77,6 +79,30 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
         return Response(ret)
 
+
+class GlobalTagDeleteAPIView(DestroyAPIView):
+
+    serializer_class = GlobalTagReadSerializer
+    #permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = 'globalTagName'
+    lookup_field = 'name'
+
+    def get_queryset(self):
+        return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
+
+    def destroy(self, request, *args, **kwargs):
+        gTag = self.get_object()
+        #check if GT is unlocked
+        gtStatus = GlobalTagStatus.objects.get(id=gTag.status_id)
+        if gtStatus.name == 'locked' :
+            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        ret = self.perform_destroy(gTag)
+        if not ret:
+            ret = {"detail": "Global tag %s deleted." % (gTag.name)}
+
+        return Response(ret)
+
+
 class GlobalTagsListAPIView(ListAPIView):
 
     serializer_class = GlobalTagListSerializer
@@ -102,14 +128,13 @@ class GlobalTagsPayloadListsListAPIView(ListAPIView):
     def list(self, request, *args, **kwargs):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
-        serializer = PayloadListReadSerializer(queryset, many=True)
+        serializer = PayloadListReadShortSerializer(queryset, many=True)
         ret = {}
         if serializer.data:
             for pl in serializer.data:
                 ret[pl['payload_type']] = pl['name']
 
         return Response(ret)
-
 
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
@@ -387,6 +412,36 @@ class PayloadIOVsList2APIView(ListAPIView):
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
 
+class PayloadIOVsListFastAPIView(ListAPIView):
+
+    def get_queryset(self):
+
+        gtName = self.request.GET.get('gtName')
+        majorIOV = self.request.GET.get('majorIOV')
+        minorIOV = self.request.GET.get('minorIOV')
+
+        plists = PayloadList.objects.filter(global_tag__name=gtName)
+        piov_ids = []
+        for pl in plists:
+
+            piov = PayloadIOV.objects.filter(payload_list=pl).filter(
+                Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV))
+            if piov:
+                piov_ids.append(piov.latest('major_iov','minor_iov').id)
+
+        piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
+
+        return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
+            'payload_iov',
+            queryset=piov_querset
+        )).filter(payload_iov__in=piov_querset).distinct()
+
+
+    def list(self, request):
+
+        queryset = self.get_queryset()
+        serializer = PayloadListReadSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
