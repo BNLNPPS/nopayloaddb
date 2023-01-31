@@ -1,4 +1,5 @@
 import sys
+import json
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.generics import DestroyAPIView
@@ -478,7 +479,7 @@ class PayloadIOVsListTestAPIView(ListAPIView):
         #plists = PayloadList.objects.filter(global_tag__name=gtName).prefetch_related_objects(payloads)
         #print(plists)
         #serializer = PayloadIOVSerializer(payloads)
-        return Response(ret)
+        return Response(json.dumps(ret))
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
