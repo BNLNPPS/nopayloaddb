@@ -393,6 +393,38 @@ class PayloadIOVsListAPIView(ListAPIView):
             serializer = PayloadListReadSerializer(queryset, many=True)
             return Response(serializer.data)
 
+class PayloadIOVsListTestMaxAPIView(ListAPIView):
+
+    def get_queryset(self):
+
+        gtName = self.request.GET.get('gtName')
+        majorIOV = self.request.GET.get('majorIOV')
+        minorIOV = self.request.GET.get('minorIOV')
+
+        tmp1 = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
+            Q(major_iov__lt=majorIOV) | Q(major_iov=majorIOV, minor_iov__lte=minorIOV)).values('payload_list_id').annotate(max_major_iov=Max('major_iov'))
+
+        q_statement = Q()
+        for pair in tmp1:
+            q_statement |= (Q(payload_list_id=pair['payload_list_id']) & Q(major_iov=pair['max_major_iov']))
+
+        tmp2 = PayloadIOV.objects.filter(q_statement).values('payload_list_id').annotate(max_minor_iov=Max('minor_iov'))
+
+        q_statement2 = Q()
+        for pair2 in tmp2:
+            q_statement2 |= (Q(payload_list_id=pair2['payload_list_id']) & Q(minor_iov=pair2['max_minor_iov']))
+
+        tmp3 = PayloadIOV.objects.filter(q_statement).filter(q_statement2)
+
+        return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
+            'payload_iov',
+            queryset=tmp3
+        )).filter(payload_iov__in=tmp3).distinct()
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = PayloadListReadSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 class PayloadIOVsList2APIView(ListAPIView):
 
