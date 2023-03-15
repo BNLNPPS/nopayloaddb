@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.7.5
 
 # Ensure that the python output is sent straight to terminal
 ENV PYTHONUNBUFFERED=1
