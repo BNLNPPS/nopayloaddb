@@ -1,6 +1,6 @@
 get_payload_iovs = '''
 WITH major_max_table AS(
-    SELECT m.payload_list_id, m.payload_url, m.major_iov, m.minor_iov, t.major_max--, l.name
+    SELECT m.payload_list_id, m.payload_url, m.major_iov, m.minor_iov, t.major_max
     FROM (
         SELECT payload_list_id, MAX(major_iov) AS major_max
         FROM "PayloadIOV"
