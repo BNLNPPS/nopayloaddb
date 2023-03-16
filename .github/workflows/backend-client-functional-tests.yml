@@ -18,7 +18,9 @@ jobs:
                 path: ${{ github.event.repository.name }}
 
             - name: launch container
-              run: docker-compose up --build -d
+              run: |
+                  cd nopayloaddb/
+                  docker-compose up --build -d
 
             - name: test curl
               run: curl http://localhost:8000/api/cdb_rest/gt
