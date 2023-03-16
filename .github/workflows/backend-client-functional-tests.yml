@@ -7,9 +7,13 @@ jobs:
               env:
                   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
               run: |
+                  echo "test 1"
                   mkdir -p ~/.ssh
+                  echo "test 2"
                   ssh-keyscan github.com >> ~/.ssh/known_hosts
+                  echo "test 3"
                   ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+                  echo "test 4"
                   ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
 
             - name: Check out the commit that triggered this job
