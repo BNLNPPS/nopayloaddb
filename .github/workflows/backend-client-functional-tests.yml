@@ -27,6 +27,9 @@ jobs:
                   token: ${{ secrets.my_token }}
                   path: nopayloadclient
 
+            - name: Install client-side requirements
+              run: yes | sh nopayloadclient/scripts/install_requirements.sh
+
             - name: Run client-side tests
               run: |
                   cd nopayloadclient
