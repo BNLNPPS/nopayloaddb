@@ -3,6 +3,9 @@ jobs:
     Backend-Client-Functional-Tests-CI:
         runs-on: ubuntu-20.04
         steps:
+            - name: print working dir
+              run: pwd
+
             - name: Check out the commit that triggered this job
               uses: actions/checkout@v3
               with:
@@ -13,6 +16,9 @@ jobs:
                   cd nopayloaddb/
                   docker-compose up --build -d
                   sleep 30
+
+            - name: print working dir
+              run: pwd
 
             - name: Check out client-side repository
               uses: actions/checkout@v3
