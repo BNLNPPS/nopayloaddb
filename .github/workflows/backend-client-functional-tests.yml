@@ -14,16 +14,19 @@ jobs:
                   docker-compose up --build -d
                   sleep 30
 
-            - name: wait for container
-              uses: ifaxity/wait-on-action
-              with:
-                  resource: http://localhost:8000/api/cdb_rest/globalTags
-
             - name: Check out client-side repository
               uses: actions/checkout@v3
               with:
                   repository: ligerlac/nopayloadclient
                   token: ${{ secrets.my_token }}
+
+            - name: Run client-side tests
+              run: |
+                  cd nopayloadclient
+                  cmake -DBUILD_TESTING=ON -S . -B build
+                  cmake --build build/
+                  cd build/
+                  ctest --verbose
 
             - name: test curl
               run: curl http://localhost:8000/api/cdb_rest/gt
