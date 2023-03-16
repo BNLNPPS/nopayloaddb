@@ -1,0 +1,7 @@
+on: [push]
+jobs:
+    Backend-Client-Functional-Tests-CI:
+        runs-on: ubuntu-20.04
+        steps:
+            - name: hello world
+              run: echo "hello world"
