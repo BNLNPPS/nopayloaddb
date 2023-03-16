@@ -3,9 +3,6 @@ jobs:
     Backend-Client-Functional-Tests-CI:
         runs-on: ubuntu-20.04
         steps:
-            - name: print working dir
-              run: pwd
-
             - name: Check out the commit that triggered this job
               uses: actions/checkout@v3
               with:
@@ -15,10 +12,6 @@ jobs:
               run: |
                   cd nopayloaddb/
                   docker-compose up --build -d
-                  sleep 30
-
-            - name: print working dir
-              run: pwd
 
             - name: Check out client-side repository
               uses: actions/checkout@v3
@@ -32,11 +25,5 @@ jobs:
 
             - name: Run client-side tests
               run: |
-                  cd nopayloadclient
-                  cmake -DBUILD_TESTING=ON -S . -B build
-                  cmake --build build/
-                  cd build/
+                  cd nopayloadclient/build
                   ctest --verbose
-
-            - name: test curl
-              run: curl http://localhost:8000/api/cdb_rest/gt
