@@ -12,6 +12,12 @@ jobs:
                   ssh-agent -a $SSH_AUTH_SOCK > /dev/null
 #                  ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
 
+            - name: Check out my other private repo
+              uses: actions/checkout@master
+              with:
+                  repository: ligerlac/nopayloadclient
+                  token: ${{ secrets.my_token }}
+
             - name: Check out the commit that triggered this job
               uses: actions/checkout@v3
               with:
