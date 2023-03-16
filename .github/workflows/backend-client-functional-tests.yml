@@ -13,7 +13,7 @@ jobs:
 #                  ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
 
             - name: Check out my other private repo
-              uses: actions/checkout@master
+              uses: actions/checkout@v3
               with:
                   repository: ligerlac/nopayloadclient
                   token: ${{ secrets.my_token }}
