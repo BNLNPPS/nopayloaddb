@@ -324,7 +324,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
     def get_globalTag(self):
         sourceGlobalTagName = self.kwargs.get('globalTagName')
-        return GlobalTag.objects.get(name = sourceGlobalTagName)
+        return GlobalTag.objects.get(name=sourceGlobalTagName)
 
     def get_cloneName(self):
         return self.kwargs.get('cloneName')
@@ -363,7 +363,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
             PayloadIOV.objects.bulk_create(rp)
 
-        serializer = GlobalTagReadSerializer(globalTag)
+        serializer = GlobalTagListSerializer(globalTag)
 
         return Response(serializer.data)
 
