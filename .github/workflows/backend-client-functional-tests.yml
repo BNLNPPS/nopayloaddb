@@ -25,6 +25,7 @@ jobs:
               with:
                   repository: ligerlac/nopayloadclient
                   token: ${{ secrets.my_token }}
+                  path: nopayloadclient
 
             - name: Run client-side tests
               run: |
