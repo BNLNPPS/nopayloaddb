@@ -11,7 +11,7 @@ from cdb_rest.authentication import CustomJWTAuthentication
 from django.shortcuts import get_object_or_404
 
 
-from django.db import transaction
+from django.db import transaction, connection
 
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -26,6 +26,7 @@ from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSer
 from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
+import cdb_rest.queries
 
 from cdb_rest.authentication import CustomJWTAuthentication
 
@@ -323,7 +324,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
     def get_globalTag(self):
         sourceGlobalTagName = self.kwargs.get('globalTagName')
-        return GlobalTag.objects.get(name = sourceGlobalTagName)
+        return GlobalTag.objects.get(name=sourceGlobalTagName)
 
     def get_cloneName(self):
         return self.kwargs.get('cloneName')
@@ -362,7 +363,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
             PayloadIOV.objects.bulk_create(rp)
 
-        serializer = GlobalTagReadSerializer(globalTag)
+        serializer = GlobalTagListSerializer(globalTag)
 
         return Response(serializer.data)
 
@@ -512,6 +513,19 @@ class PayloadIOVsListTestAPIView(ListAPIView):
         #print(plists)
         #serializer = PayloadIOVSerializer(payloads)
         return Response(json.dumps(ret))
+
+
+class PayloadIOVsSQLListAPIView(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs,
+               {'my_major_iov': self.request.GET.get('majorIOV'),
+                'my_minor_iov': self.request.GET.get('minorIOV'),
+                'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
+
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
