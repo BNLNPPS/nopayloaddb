@@ -1,0 +1,29 @@
+on: [push]
+jobs:
+    Backend-Client-Functional-Tests-CI:
+        runs-on: ubuntu-20.04
+        steps:
+            - name: Check out the commit that triggered this job
+              uses: actions/checkout@v3
+              with:
+                path: ${{ github.event.repository.name }}
+
+            - name: launch container
+              run: |
+                  cd nopayloaddb/
+                  docker-compose up --build -d
+
+            - name: Check out client-side repository
+              uses: actions/checkout@v3
+              with:
+                  repository: ligerlac/nopayloadclient
+                  token: ${{ secrets.my_token }}
+                  path: nopayloadclient
+
+            - name: Install client-side requirements
+              run: yes | sh nopayloadclient/scripts/install_requirements.sh
+
+            - name: Run client-side tests
+              run: |
+                  cd nopayloadclient/build
+                  ctest --verbose
