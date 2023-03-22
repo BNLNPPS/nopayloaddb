@@ -15,7 +15,7 @@ JOIN "PayloadType" pt ON pl.payload_type_id = pt.id;
 
 create_comb_iov_column = '''
 ALTER TABLE "PayloadIOV" ADD comb_iov NUMERIC(38,19);
-UPDATE "PayloadIOV" SET comb_iov = major_iov + CAST(minor_iov AS DECIMAL(19,0)) / 10E18;
+UPDATE "PayloadIOV" SET comb_iov = major_iov + CAST(minor_iov AS NUMERIC(19,0)) / 10E18;
 '''
 
 create_covering_index = '''
