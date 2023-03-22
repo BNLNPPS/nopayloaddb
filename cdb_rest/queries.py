@@ -1,9 +1,9 @@
 get_payload_iovs = '''
-SELECT pt.name AS payload_type_name, pi.payload_url, pi.major_iov, pi.minor_iov, pi.major_iov_end, pi.minor_iov_end
+SELECT pt.name AS payload_type_name, pi.payload_url, pi.checksum, pi.major_iov, pi.minor_iov, pi.major_iov_end, pi.minor_iov_end
 FROM "PayloadList" pl
 JOIN "GlobalTag" gt ON pl.global_tag_id = gt.id AND gt.name = %(my_gt)s
 JOIN LATERAL (
-   SELECT payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end
+   SELECT payload_url, checksum, major_iov, minor_iov, major_iov_end, minor_iov_end
    FROM   "PayloadIOV" pi
    WHERE  pi.payload_list_id = pl.id
      AND pi.comb_iov <= CAST(%(my_major_iov)s + CAST(%(my_minor_iov)s AS DECIMAL(19,0)) / 10E18 AS DECIMAL(38,19)) 
