@@ -527,6 +527,54 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
         return Response(row)
 
 
+class PayloadIOVsSQLLateralListAPIView(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs_lateral,
+               {'my_major_iov': self.request.GET.get('majorIOV'),
+                'my_minor_iov': self.request.GET.get('minorIOV'),
+                'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
+
+
+class PayloadIOVsSQLLateralMajorListAPIView(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs_lateral_major,
+               {'my_major_iov': self.request.GET.get('majorIOV'),
+                'my_minor_iov': self.request.GET.get('minorIOV'),
+                'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
+
+
+class PayloadIOVsSQLLateralMinorListAPIView(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs_lateral_minor,
+               {'my_major_iov': self.request.GET.get('majorIOV'),
+                'my_minor_iov': self.request.GET.get('minorIOV'),
+                'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
+
+
+class PayloadIOVsSQLLateralCombListAPIView(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs_lateral_comb,
+               {'my_major_iov': self.request.GET.get('majorIOV'),
+                'my_minor_iov': self.request.GET.get('minorIOV'),
+                'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
+
+
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
 
