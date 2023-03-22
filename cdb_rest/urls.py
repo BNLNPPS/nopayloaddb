@@ -3,9 +3,8 @@ from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView,
 from cdb_rest.views import GlobalTagsListAPIView, GlobalTagsPayloadListsListAPIView, GlobalTagByNameDetailAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
 from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsListFastAPIView,\
-    PayloadIOVsListTestMaxAPIView, PayloadIOVsSQLListAPIView, PayloadIOVsSQLLateralListAPIView,\
-    PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView,\
-    PayloadIOVsSQLLateralMajorListAPIView, PayloadIOVsSQLLateralMinorListAPIView, PayloadIOVsSQLLateralCombListAPIView
+    PayloadIOVsListTestMaxAPIView, PayloadIOVsSQLListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView,\
+    PayloadIOVsRangesListAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
 from cdb_rest.views import GlobalTagDeleteAPIView
@@ -55,10 +54,6 @@ urlpatterns = [
     path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovssql/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovssql"),
     path('payloadiovssqlgroup/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovssqlgroup"),
-    path('payloadiovssqllateral/', PayloadIOVsSQLLateralListAPIView.as_view(), name="payloadiovssqllateral"),
-    path('payloadiovssqllateralmajor/', PayloadIOVsSQLLateralMajorListAPIView.as_view(), name="payloadiovssqllateral"),
-    path('payloadiovssqllateralminor/', PayloadIOVsSQLLateralMinorListAPIView.as_view(), name="payloadiovssqllateral"),
-    path('payloadiovssqllateralcomb/', PayloadIOVsSQLLateralCombListAPIView.as_view(), name="payloadiovssqllateral"),
 
     path('gt_change_status/<str:globalTagName>/<str:newStatus>', GlobalTagChangeStatusAPIView.as_view(), name="global_tag_change_status")
 
