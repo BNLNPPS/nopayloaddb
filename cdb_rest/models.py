@@ -112,7 +112,7 @@ class PayloadIOV(models.Model):
 
         indexes = [
             #models.Index(fields=['major_iov', 'minor_iov', ]),
-            models.Index(F('comb_iov').desc(nulls_last=True), include=['payload_list'], name='covering_idx')
+            models.Index(F('comb_iov').desc(nulls_last=True), 'payload_list', name='covering_idx')
         ]
 
     def __str__(self):
