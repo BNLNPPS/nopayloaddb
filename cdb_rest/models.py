@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 # from django.conf import settings
 
 from django.db import models
+from django.db.models import F
 from django.utils.encoding import smart_str
 # from django.utils.translation import ugettext_lazy as _
 
@@ -104,12 +105,14 @@ class PayloadIOV(models.Model):
     description = models.CharField(max_length=255, db_column='description', null=True)
     inserted = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
+    comb_iov = models.DecimalField(db_column='comb_iov',max_digits=38,decimal_places=19, null=True)
 
     class Meta:
         db_table = u'PayloadIOV'
 
         indexes = [
-            models.Index(fields=['major_iov', 'minor_iov', ]),
+            #models.Index(fields=['major_iov', 'minor_iov', ]),
+            models.Index(F('comb_iov').desc(nulls_last=True), include=['payload_list'], name='covering_idx')
         ]
 
     def __str__(self):

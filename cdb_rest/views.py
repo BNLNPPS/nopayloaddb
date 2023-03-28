@@ -28,6 +28,8 @@ from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSeri
 #from cdb_rest.serializers import PayloadListIdSeqSerializer
 import cdb_rest.queries
 
+from decimal import Decimal
+
 from cdb_rest.authentication import CustomJWTAuthentication
 
 #class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
@@ -255,6 +257,8 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         if 'minor_iov_end' not in data:
             data['minor_iov_end'] = sys.maxsize
 
+        data['comb_iov'] = comb_iov = Decimal( Decimal(data["major_iov"]) + Decimal(data["minor_iov"])/10**18)
+
 #        if (data['major_iov_end'] == None):
 #            data['minor_iov_end'] == None
 #        elif ((data['minor_iov'] == None) and (data['major_iov_end'] < data['major_iov'])):
@@ -294,7 +298,12 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"], major_iov = obj["major_iov"], minor_iov = obj["minor_iov"], major_iov_end = sys.maxsize, minor_iov_end = sys.maxsize, payload_list=PayloadList.objects.get(name=obj['payload_list']), inserted=None) for obj in data]
+        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"],
+                            major_iov = obj["major_iov"], minor_iov = obj["minor_iov"],
+                            major_iov_end = sys.maxsize, minor_iov_end = sys.maxsize,
+                            payload_list=PayloadList.objects.get(name=obj['payload_list']),
+                            inserted=None,
+                            comb_iov = Decimal( Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"])/10**18)) for obj in data]
 
         PayloadIOV.objects.bulk_create(batch)
 
@@ -526,6 +535,16 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
             row = cursor.fetchall()
         return Response(row)
 
+class PayloadIOVsSQLListAPIView2(ListAPIView):
+
+    def list(self, request):
+        with connection.cursor() as cursor:
+            cursor.execute(cdb_rest.queries.get_payload_iovs2,
+                           {'my_major_iov': self.request.GET.get('majorIOV'),
+                            'my_minor_iov': self.request.GET.get('minorIOV'),
+                            'my_gt': self.request.GET.get('gtName')})
+            row = cursor.fetchall()
+        return Response(row)
 
 #Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
 class PayloadIOVsRangesListAPIView(ListAPIView):
