@@ -3,7 +3,7 @@ from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView,
 from cdb_rest.views import GlobalTagsListAPIView, GlobalTagsPayloadListsListAPIView, GlobalTagByNameDetailAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
 from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsListFastAPIView, PayloadIOVsListTestMaxAPIView,\
-    PayloadIOVsSQLListAPIView, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
+    PayloadIOVsSQLListAPIView, PayloadIOVsSQLListAPIView2, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
 from cdb_rest.views import GlobalTagDeleteAPIView
@@ -52,6 +52,7 @@ urlpatterns = [
     path('payloadiovstest/', PayloadIOVsListTestMaxAPIView.as_view(), name="payloadiovstest"),
     path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovssql/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovssql"),
+    path('payloadiovssql2/', PayloadIOVsSQLListAPIView2.as_view(), name="payloadiovssql2"),
 
     path('gt_change_status/<str:globalTagName>/<str:newStatus>', GlobalTagChangeStatusAPIView.as_view(), name="global_tag_change_status")
 
