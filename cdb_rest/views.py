@@ -1,5 +1,6 @@
 import sys
 import json
+import time
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.generics import DestroyAPIView
@@ -48,6 +49,12 @@ class GlobalTagByNameDetailAPIView(RetrieveAPIView):
         queryset = GlobalTag.objects.all()
         obj = get_object_or_404(queryset, name=gtName)
         return obj
+
+class TimeoutListAPIView(ListAPIView):
+
+    def list(self, request):
+        time.sleep(1800)
+        return Response()
 
 class GlobalTagListCreationAPIView(ListCreateAPIView):
 

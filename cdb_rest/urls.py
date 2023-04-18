@@ -10,6 +10,7 @@ from cdb_rest.views import GlobalTagDeleteAPIView
 
 #from cdb_rest.views import GlobalTagCreateAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
+from cdb_rest.views import TimeoutListAPIView
 
 app_name = 'cdb_rest'
 
@@ -53,6 +54,7 @@ urlpatterns = [
     path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovssql/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovssql"),
     path('payloadiovssql2/', PayloadIOVsSQLListAPIView2.as_view(), name="payloadiovssql2"),
+    path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
 
     path('gt_change_status/<str:globalTagName>/<str:newStatus>', GlobalTagChangeStatusAPIView.as_view(), name="global_tag_change_status")
 
