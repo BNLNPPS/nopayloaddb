@@ -2,14 +2,13 @@ from django.urls import path
 from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView, GlobalTagStatusCreationAPIView
 from cdb_rest.views import GlobalTagsListAPIView, GlobalTagsPayloadListsListAPIView, GlobalTagByNameDetailAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView, PayloadIOVListCreationAPIView, PayloadListDetailAPIView
-from cdb_rest.views import PayloadIOVsListAPIView, PayloadIOVsList2APIView, PayloadIOVsListFastAPIView, PayloadIOVsListTestMaxAPIView,\
-    PayloadIOVsSQLListAPIView, PayloadIOVsSQLListAPIView2, PayloadIOVsRangesListAPIView, PayloadListDetailAPIView, PayloadIOVDetailAPIView
+from cdb_rest.views import PayloadIOVsORMMaxListAPIView, PayloadIOVsORMOrderByListAPIView, PayloadIOVsSQLListAPIView, PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
 from cdb_rest.views import GlobalTagDeleteAPIView
 
-#from cdb_rest.views import GlobalTagCreateAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
+from cdb_rest.views import TimeoutListAPIView
 
 app_name = 'cdb_rest'
 
@@ -24,10 +23,7 @@ urlpatterns = [
     path('globalTags', GlobalTagsListAPIView.as_view(), name="global_tags_list"),
     path('gtPayloadLists/<str:globalTagName>', GlobalTagsPayloadListsListAPIView.as_view(), name="global_tag_payload_lists"),
 
-    #Create GT
-    #path('globalTag/<gtType>', GlobalTagCreateAPIView.as_view(), name="create_global_tag"),
     #Clone GT
-    #path('globalTags/<int:sourceGlobalTagId>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
     path('cloneGlobalTag/<str:globalTagName>/<str:cloneName>', GlobalTagCloneAPIView.as_view(), name="clone_global_tag"),
 
 
@@ -46,13 +42,12 @@ urlpatterns = [
     #get GT PayloadIOVs
     #payloads gtName , runNumber , expNumber
     #path('payloadiovs/<globalTagId>/<majorIOV>/<minorIOV>', PayloadIOVsListAPIView.as_view(), name="payload_list"),
-    path('payloadiovs/', PayloadIOVsListAPIView.as_view(), name="payloadiovs"),
-    path('payloadiovs2/', PayloadIOVsList2APIView.as_view(), name="payloadiovs2"),
-    path('payloadiovsfast/', PayloadIOVsListFastAPIView.as_view(), name="payloadiovsfast"),
-    path('payloadiovstest/', PayloadIOVsListTestMaxAPIView.as_view(), name="payloadiovstest"),
-    path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
-    path('payloadiovssql/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovssql"),
-    path('payloadiovssql2/', PayloadIOVsSQLListAPIView2.as_view(), name="payloadiovssql2"),
+
+    path('payloadiovs_orm_orderby/', PayloadIOVsORMOrderByListAPIView.as_view(), name="payloadiovs_orm_orderby"),
+    path('payloadiovs_orm_max/', PayloadIOVsORMMaxListAPIView.as_view(), name="payloadiovs_orm_max"),
+    #path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
+    path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
+    path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
 
     path('gt_change_status/<str:globalTagName>/<str:newStatus>', GlobalTagChangeStatusAPIView.as_view(), name="global_tag_change_status")
 
