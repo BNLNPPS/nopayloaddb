@@ -264,7 +264,7 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         if 'minor_iov_end' not in data:
             data['minor_iov_end'] = sys.maxsize
 
-        data['comb_iov'] = comb_iov = Decimal( Decimal(data["major_iov"]) + Decimal(data["minor_iov"])/10**18)
+        data['comb_iov'] = comb_iov = Decimal( Decimal(data["major_iov"]) + Decimal(data["minor_iov"])/10**19)
 
 #        if (data['major_iov_end'] == None):
 #            data['minor_iov_end'] == None
@@ -310,7 +310,7 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
                             major_iov_end = sys.maxsize, minor_iov_end = sys.maxsize,
                             payload_list=PayloadList.objects.get(name=obj['payload_list']),
                             inserted=None,
-                            comb_iov = Decimal( Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"])/10**18)) for obj in data]
+                            comb_iov = Decimal( Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"])/10**19)) for obj in data]
 
         PayloadIOV.objects.bulk_create(batch)
 
@@ -395,7 +395,7 @@ class PayloadIOVsORMMaxListAPIView(ListAPIView):
         minorIOV = self.request.GET.get('minorIOV')
 
         tmp1 = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
-        comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**18)).values('payload_list_id').annotate(max_comb_iov=Max('comb_iov'))
+        comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**19)).values('payload_list_id').annotate(max_comb_iov=Max('comb_iov'))
 
         q_statement = Q()
         for pair in tmp1:
@@ -416,7 +416,7 @@ class PayloadIOVsORMOrderByListAPIView(ListAPIView):
         minorIOV = self.request.GET.get('minorIOV')
 
         piov_querset = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
-                    comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**18) )\
+                    comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**19) )\
                                                                 .order_by('payload_list_id',
                                                                           '-comb_iov').distinct('payload_list_id')
         return piov_querset

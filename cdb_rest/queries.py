@@ -6,7 +6,7 @@ JOIN LATERAL (
    SELECT payload_url, checksum, major_iov, minor_iov, major_iov_end, minor_iov_end
    FROM   "PayloadIOV" pi
    WHERE  pi.payload_list_id = pl.id
-     AND pi.comb_iov <= CAST(%(my_major_iov)s + CAST(%(my_minor_iov)s AS DECIMAL(19,0)) / 10E18 AS DECIMAL(38,19))
+     AND pi.comb_iov <= CAST(%(my_major_iov)s + CAST(%(my_minor_iov)s AS DECIMAL(19,0)) / 1E19 AS DECIMAL(38,19))
    ORDER BY pi.comb_iov DESC NULLS LAST
    LIMIT 1
 ) pi ON true
