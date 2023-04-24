@@ -3,3 +3,5 @@ venv/
 .idea/
 *.log
 .env_mine
+*.xml
+db/
