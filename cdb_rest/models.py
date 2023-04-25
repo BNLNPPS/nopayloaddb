@@ -1,14 +1,12 @@
 from __future__ import unicode_literals
-# from django.conf import settings
 
 from django.db import models
 from django.db.models import F
 from django.utils.encoding import smart_str
-# from django.utils.translation import ugettext_lazy as _
+
 
 class GlobalTagStatus(models.Model):
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #name = models.CharField(primary_key=True, max_length=80, db_column='name', unique=True)
     name = models.CharField(max_length=80, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
@@ -24,7 +22,6 @@ class GlobalTagStatus(models.Model):
 
 
 class GlobalTag(models.Model):
-    #id = models.BigIntegerField(primary_key=True, db_column='id')
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(max_length=80, db_column='name', unique=True)
     author = models.CharField(max_length=80, db_column='author', null=True)
@@ -42,9 +39,9 @@ class GlobalTag(models.Model):
     def __unicode__(self):
         return smart_str(self.name)
 
+
 class PayloadType(models.Model):
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
-    #name = models.CharField(primary_key=True, max_length=80, db_column='name',unique=True)
     name = models.CharField(max_length=80, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
@@ -58,6 +55,7 @@ class PayloadType(models.Model):
     def __unicode__(self):
         return smart_str(self.name)
 
+
 class PayloadListIdSequence(models.Model):
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
 
@@ -66,20 +64,20 @@ class PayloadListIdSequence(models.Model):
 
     def __int__(self):
         return self.id
+
     def __str__(self):
         return smart_str(self.id)
+
     def __unicode__(self):
         return smart_str(self.id)
 
 
 class PayloadList(models.Model):
     id = models.BigIntegerField(primary_key=True, db_column='id', unique=True)
-    #id  = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     name = models.CharField(max_length=255, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     global_tag = models.ForeignKey(GlobalTag, related_name='payload_lists', on_delete=models.CASCADE, null=True)
     payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE)
-    #freeze_time = models.BigIntegerField(db_column='freeze_time', null=True)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 
@@ -92,9 +90,9 @@ class PayloadList(models.Model):
     def __unicode__(self):
         return smart_str(self.name)
 
+
 class PayloadIOV(models.Model):
-    #id = models.BigIntegerField(primary_key=True, db_column='id',unique=True)
-    id = models.BigAutoField(primary_key = True, db_column = 'id', unique=True)
+    id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     payload_url = models.CharField(max_length=255, db_column='payload_url')
     checksum = models.CharField(max_length=255, db_column='checksum')
     major_iov = models.BigIntegerField(db_column='major_iov')
@@ -105,13 +103,12 @@ class PayloadIOV(models.Model):
     description = models.CharField(max_length=255, db_column='description', null=True)
     inserted = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
-    comb_iov = models.DecimalField(db_column='comb_iov',max_digits=38,decimal_places=19, null=True)
+    comb_iov = models.DecimalField(db_column='comb_iov', max_digits=38, decimal_places=19, null=True)
 
     class Meta:
         db_table = u'PayloadIOV'
 
         indexes = [
-            #models.Index(fields=['major_iov', 'minor_iov', ]),
             models.Index('payload_list', F('comb_iov').desc(nulls_last=True), name='covering_idx')
         ]
 
@@ -120,6 +117,3 @@ class PayloadIOV(models.Model):
 
     def __unicode__(self):
         return smart_str(self.payload_url)
-
-
-

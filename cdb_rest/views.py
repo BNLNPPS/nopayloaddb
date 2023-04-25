@@ -1,43 +1,41 @@
 import sys
-import json
 import time
 
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, UpdateAPIView, RetrieveAPIView
+from django.shortcuts import get_object_or_404
+from decimal import Decimal
+
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, \
+    UpdateAPIView, RetrieveAPIView
 from rest_framework.generics import DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
-#from rest_framework.renderers import JSONRenderer
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from cdb_rest.authentication import CustomJWTAuthentication
-from django.shortcuts import get_object_or_404
-
+# from rest_framework.renderers import JSONRenderer
+# from rest_framework.permissions import IsAuthenticated, AllowAny
+# from cdb_rest.authentication import CustomJWTAuthentication
 
 from django.db import transaction, connection
 
 from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import Max
-#from django.db.models import QuerySet
-from django.forms.models import model_to_dict
+# from django.db.models import QuerySet
+# from django.forms.models import model_to_dict
 
 from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
 # from todos.permissions import UserIsOwnerTodo
-from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, GlobalTagListSerializer
+from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, \
+    GlobalTagListSerializer
 from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
 from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
-#from cdb_rest.serializers import PayloadListIdSeqSerializer
 import cdb_rest.queries
 
-from decimal import Decimal
 
-from cdb_rest.authentication import CustomJWTAuthentication
-
-#class GlobalTagDetailAPIView(RetrieveUpdateDestroyAPIView):
 class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
-    #permission_classes = (IsAuthenticated, UserIsOwnerTodo)
+    # permission_classes = (IsAuthenticated, UserIsOwnerTodo)
+
 
 class GlobalTagByNameDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
@@ -45,10 +43,11 @@ class GlobalTagByNameDetailAPIView(RetrieveAPIView):
     lookup_url_kwarg = 'globalTagName'
 
     def get_object(self):
-        gtName = self.kwargs.get('globalTagName')
+        gt_name = self.kwargs.get('globalTagName')
         queryset = GlobalTag.objects.all()
-        obj = get_object_or_404(queryset, name=gtName)
+        obj = get_object_or_404(queryset, name=gt_name)
         return obj
+
 
 class TimeoutListAPIView(ListAPIView):
 
@@ -56,13 +55,11 @@ class TimeoutListAPIView(ListAPIView):
         time.sleep(1800)
         return Response()
 
+
 class GlobalTagListCreationAPIView(ListCreateAPIView):
-
-
-    #authentication_classes = [CustomJWTAuthentication]
-    #permission_classes = (IsAuthenticated)
+    # authentication_classes = [CustomJWTAuthentication]
+    # permission_classes = (IsAuthenticated)
     serializer_class = GlobalTagCreateSerializer
-
 
     def get_queryset(self):
         return GlobalTag.objects.all()
@@ -75,27 +72,24 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-
         try:
-            gtStatus = GlobalTagStatus.objects.get(name=data['status'])
-            data['status']= gtStatus.pk
-        except:
+            gt_status = GlobalTagStatus.objects.get(name=data['status'])
+            data['status'] = gt_status.pk
+        except KeyError:
             return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         ret = serializer.data
-        ret['status'] = gtStatus.name
+        ret['status'] = gt_status.name
 
         return Response(ret)
 
 
 class GlobalTagDeleteAPIView(DestroyAPIView):
-
     serializer_class = GlobalTagReadSerializer
-    #permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     lookup_url_kwarg = 'globalTagName'
     lookup_field = 'name'
 
@@ -103,20 +97,17 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
 
     def destroy(self, request, *args, **kwargs):
-        gTag = self.get_object()
-        #check if GT is unlocked
-        gtStatus = GlobalTagStatus.objects.get(id=gTag.status_id)
-        if gtStatus.name == 'locked' :
+        gt = self.get_object()
+        gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
+        if gt_status.name == 'locked':
             return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        ret = self.perform_destroy(gTag)
+        ret = self.perform_destroy(gt)
         if not ret:
-            ret = {"detail": "Global tag %s deleted." % (gTag.name)}
-
+            ret = {"detail": "Global tag %s deleted." % gt.name}
         return Response(ret)
 
 
 class GlobalTagsListAPIView(ListAPIView):
-
     serializer_class = GlobalTagListSerializer
 
     def get_queryset(self):
@@ -129,13 +120,14 @@ class GlobalTagsListAPIView(ListAPIView):
 
         return Response(serializer.data)
 
+
 class GlobalTagsPayloadListsListAPIView(ListAPIView):
 
-    #serializer_class = PayloadListReadSerializer
+    # serializer_class = PayloadListReadSerializer
 
     def get_queryset(self):
-        gtName = self.kwargs.get('globalTagName')
-        return PayloadList.objects.filter(global_tag__name = gtName)
+        gt_name = self.kwargs.get('globalTagName')
+        return PayloadList.objects.filter(global_tag__name=gt_name)
 
     def list(self, request, *args, **kwargs):
         # Note the use of `get_queryset()` instead of `self.queryset`
@@ -150,12 +142,10 @@ class GlobalTagsPayloadListsListAPIView(ListAPIView):
 
 
 class GlobalTagStatusCreationAPIView(ListCreateAPIView):
-
-    #authentication_classes = ()
-    #permission_classes = ()
+    # authentication_classes = ()
+    # permission_classes = ()
     serializer_class = GlobalTagStatusSerializer
     lookup_field = 'name'
-
 
     def get_queryset(self):
         return GlobalTagStatus.objects.all()
@@ -170,18 +160,17 @@ class GlobalTagStatusCreationAPIView(ListCreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-
         return Response(serializer.data)
 
 
 class PayloadListListCreationAPIView(ListCreateAPIView):
-    #    authentication_classes = ()
-    #    permission_classes = ()
+    # authentication_classes = ()
+    # permission_classes = ()
     serializer_class = PayloadListCreateSerializer
 
-    def get_next_id(self):
+    @staticmethod
+    def get_next_id():
         return PayloadListIdSequence.objects.create()
-
 
     def get_queryset(self):
         return PayloadList.objects.all()
@@ -194,18 +183,18 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        id = self.get_next_id()
+        next_id = self.get_next_id()
 
-        data['id'] = int(id)
-        data['name'] = data['payload_type'] + '_' + str(id)
+        data['id'] = int(next_id)
+        data['name'] = data['payload_type'] + '_' + str(next_id)
 
         try:
-            pType = PayloadType.objects.get(name=data['payload_type'])
-            data['payload_type'] = pType.pk
-        except:
+            payload_type = PayloadType.objects.get(name=data['payload_type'])
+            data['payload_type'] = payload_type.pk
+        except KeyError:
             return Response({"detail": "PayloadType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        #Remove GT if provided
+        # Remove GT if provided
         data['global_tag'] = None
 
         serializer = self.get_serializer(data=data)
@@ -213,17 +202,19 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         self.perform_create(serializer)
 
         ret = serializer.data
-        ret['payload_type'] = pType.name
+        ret['payload_type'] = payload_type.name
 
         return Response(ret)
+
 
 class PayloadListDetailAPIView(RetrieveAPIView):
     serializer_class = PayloadListCreateSerializer
     queryset = PayloadList.objects.all()
 
+
 class PayloadTypeListCreationAPIView(ListCreateAPIView):
-    #    authentication_classes = ()
-    #    permission_classes = ()
+    # authentication_classes = ()
+    # permission_classes = ()
     serializer_class = PayloadTypeSerializer
 
     def get_queryset(self):
@@ -241,6 +232,7 @@ class PayloadTypeListCreationAPIView(ListCreateAPIView):
         self.perform_create(serializer)
 
         return Response(serializer.data)
+
 
 class PayloadIOVListCreationAPIView(ListCreateAPIView):
     #    authentication_classes = ()
@@ -264,40 +256,31 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         if 'minor_iov_end' not in data:
             data['minor_iov_end'] = sys.maxsize
 
-        data['comb_iov'] = comb_iov = Decimal( Decimal(data["major_iov"]) + Decimal(data["minor_iov"])/10**19)
+        data['comb_iov'] = Decimal(Decimal(data["major_iov"]) + Decimal(data["minor_iov"]) / 10 ** 19)
 
-#        if (data['major_iov_end'] == None):
-#            data['minor_iov_end'] == None
-#        elif ((data['minor_iov'] == None) and (data['major_iov_end'] < data['major_iov'])):
-#            data['minor_iov_end'] == None
-#            err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d" % \
-#                      (data['payload_url'], data['major_iov'], data['major_iov_end'])
-#            return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#        elif((data['major_iov_end'] < data['major_iov']) or ((data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] < data['minor_iov']))):
         if ((data['major_iov_end'] < data['major_iov']) or (
                 (data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] <= data['minor_iov']))):
-            err_msg = "%s PayloadIOV ending IOVs should be greater or equel than starting. Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
-                      (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'], data['minor_iov_end'])
+            err_msg = "%s PayloadIOV ending IOVs should be greater or equal than starting." \
+                      " Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
+                      (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'],
+                       data['minor_iov_end'])
             return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            pass
-
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        #pList.save()
         ret = serializer.data
-        #ret['payload_list'] = pList.name
         return Response(ret)
+
 
 class PayloadIOVDetailAPIView(RetrieveAPIView):
     serializer_class = PayloadIOVSerializer
     queryset = PayloadIOV.objects.all()
 
+
 class PayloadIOVBulkCreationAPIView(CreateAPIView):
-    #    authentication_classes = ()
-    #    permission_classes = ()
+    # authentication_classes = ()
+    # permission_classes = ()
     serializer_class = PayloadIOVSerializer
 
     def get_queryset(self):
@@ -305,97 +288,104 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        batch = [PayloadIOV(id = None, payload_url = obj["payload_url"],
-                            major_iov = obj["major_iov"], minor_iov = obj["minor_iov"],
-                            major_iov_end = sys.maxsize, minor_iov_end = sys.maxsize,
+        batch = [PayloadIOV(id=None, payload_url=obj["payload_url"],
+                            major_iov=obj["major_iov"], minor_iov=obj["minor_iov"],
+                            major_iov_end=sys.maxsize, minor_iov_end=sys.maxsize,
                             payload_list=PayloadList.objects.get(name=obj['payload_list']),
                             inserted=None,
-                            comb_iov = Decimal( Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"])/10**19)) for obj in data]
+                            comb_iov=Decimal(Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"]) / 10 ** 19))
+                 for obj in data]
 
         PayloadIOV.objects.bulk_create(batch)
 
         return Response()
 
-#API to create GT. GT provided as JSON body
-#class GlobalTagCreateAPIView(CreateAPIView):
-#
-#    serializer_class = GlobalTagCreateSerializer
-#
-#    def create(self, request, *args, **kwargs):
-#        serializer = self.get_serializer(data=request.data)
-#        serializer.is_valid(raise_exception=True)
-#
-#        #TODO name check
-#
-#        self.perform_create(serializer)
-#
-#        return Response(serializer.data)
 
+# API to create GT. GT provided as JSON body
+# class GlobalTagCreateAPIView(CreateAPIView):
+#
+#     serializer_class = GlobalTagCreateSerializer
+#
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#
+#         #TODO name check
+#
+#         self.perform_create(serializer)
+#
+#         return Response(serializer.data)
 
-#GT deep copy endpoint
 
 class GlobalTagCloneAPIView(CreateAPIView):
+    """
+    GT deep copy endpoint
+    """
 
     serializer_class = GlobalTagReadSerializer
 
-    def get_globalTag(self):
-        sourceGlobalTagName = self.kwargs.get('globalTagName')
-        return GlobalTag.objects.get(name=sourceGlobalTagName)
+    def get_global_tag(self):
+        source_name = self.kwargs.get('globalTagName')
+        return GlobalTag.objects.get(name=source_name)
 
-    def get_cloneName(self):
+    def get_clone_name(self):
         return self.kwargs.get('cloneName')
 
-    def get_payloadLists(self, globalTag):
-        return PayloadList.objects.filter(global_tag=globalTag)
+    @staticmethod
+    def get_payload_lists(global_tag):
+        return PayloadList.objects.filter(global_tag=global_tag)
 
-    def get_payloadIOVs(self, payloadList):
-        return PayloadIOV.objects.filter(payload_list=payloadList)
+    @staticmethod
+    def get_payload_iovs(payload_list):
+        return PayloadIOV.objects.filter(payload_list=payload_list)
 
-    def get_next_id(self):
+    @staticmethod
+    def get_next_id():
         return PayloadListIdSequence.objects.create()
 
     @transaction.atomic
     def create(self, request, globalTagName, cloneName):
-        globalTag = self.get_globalTag()
-        payloadLists = self.get_payloadLists(globalTag)
+        global_tag = self.get_global_tag()
+        payload_lists = self.get_payload_lists(global_tag)
 
-        globalTag.id = None
-        globalTag.name = self.get_cloneName()
-        globalTag.status = GlobalTagStatus.objects.get(name='unlocked')
-        self.perform_create(globalTag)
+        global_tag.id = None
+        global_tag.name = self.get_clone_name()
+        global_tag.status = GlobalTagStatus.objects.get(name='unlocked')
+        self.perform_create(global_tag)
 
-        for pList in payloadLists:
-            payloadIOVs = self.get_payloadIOVs(pList)
-            plid = self.get_next_id()
-            pList.id = plid
-            pList.name = str(pList.payload_type) + '_' + str(plid)
-            pList.global_tag = globalTag
-            self.perform_create(pList)
+        for p_list in payload_lists:
+            payload_iovs = self.get_payload_iovs(p_list)
+            p_list_id = self.get_next_id()
+            p_list.id = p_list_id
+            p_list.name = str(p_list.payload_type) + '_' + str(p_list_id)
+            p_list.global_tag = global_tag
+            self.perform_create(p_list)
             rp = []
-            for payload in payloadIOVs:
+            for payload in payload_iovs:
                 payload.id = None
-                payload.payload_list = pList
+                payload.payload_list = p_list
                 rp.append(payload)
 
             PayloadIOV.objects.bulk_create(rp)
 
-        serializer = GlobalTagListSerializer(globalTag)
+        serializer = GlobalTagListSerializer(global_tag)
 
         return Response(serializer.data)
 
 
-#Interface to take list of PayloadIOVs groupped by PayloadLists for a given GT and IOVs
-
 class PayloadIOVsORMMaxListAPIView(ListAPIView):
+    """
+    Interface to take list of PayloadIOVs grouped by PayloadLists for a given GT and IOVs
+    """
 
     def get_queryset(self):
+        gt_name = self.request.GET.get('gtName')
+        major_iov = self.request.GET.get('majorIOV')
+        minor_iov = self.request.GET.get('minorIOV')
 
-        gtName = self.request.GET.get('gtName')
-        majorIOV = self.request.GET.get('majorIOV')
-        minorIOV = self.request.GET.get('minorIOV')
-
-        tmp1 = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
-        comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**19)).values('payload_list_id').annotate(max_comb_iov=Max('comb_iov'))
+        tmp1 = PayloadIOV.objects.filter(payload_list__global_tag__name=gt_name) \
+            .filter(comb_iov__lte=Decimal(Decimal(major_iov) + Decimal(minor_iov) / 10 ** 19)) \
+            .values('payload_list_id').annotate(max_comb_iov=Max('comb_iov'))
 
         q_statement = Q()
         for pair in tmp1:
@@ -408,23 +398,24 @@ class PayloadIOVsORMMaxListAPIView(ListAPIView):
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
 
+
 class PayloadIOVsORMOrderByListAPIView(ListAPIView):
 
     def get_queryset(self):
-        gtName = self.request.GET.get('gtName')
-        majorIOV = self.request.GET.get('majorIOV')
-        minorIOV = self.request.GET.get('minorIOV')
+        gt_name = self.request.GET.get('gtName')
+        major_iov = self.request.GET.get('majorIOV')
+        minor_iov = self.request.GET.get('minorIOV')
 
-        piov_querset = PayloadIOV.objects.filter(payload_list__global_tag__name=gtName).filter(
-                    comb_iov__lte=Decimal( Decimal(majorIOV) + Decimal(minorIOV)/10**19) )\
-                                                                .order_by('payload_list_id',
-                                                                          '-comb_iov').distinct('payload_list_id')
-        return piov_querset
+        queryset = PayloadIOV.objects.filter(payload_list__global_tag__name=gt_name) \
+            .filter(comb_iov__lte=Decimal(Decimal(major_iov) + Decimal(minor_iov) / 10 ** 19)) \
+            .order_by('payload_list_id', '-comb_iov').distinct('payload_list_id')
+        return queryset
 
     def list(self, request):
         queryset = self.get_queryset()
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
+
 
 class PayloadIOVsSQLListAPIView(ListAPIView):
 
@@ -437,54 +428,51 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
             row = cursor.fetchall()
         return Response(row)
 
-#Interface to take list of PayloadIOVs ranges groupped by PayloadLists for a given GT and IOVs
+
 class PayloadIOVsRangesListAPIView(ListAPIView):
+    """
+    Interface to take list of PayloadIOVs ranges grouped by PayloadLists for a given GT and IOVs
+    """
 
-        def get_queryset(self):
+    def get_queryset(self):
+        gt_name = self.request.GET.get('gtName')
+        start_major_iov = self.request.GET.get('startMajorIOV')
+        start_minor_iov = self.request.GET.get('startMinorIOV')
+        end_major_iov = self.request.GET.get('endMajorIOV')
+        end_minor_iov = self.request.GET.get('endMinorIOV')
 
-            gtName = self.request.GET.get('gtName')
-            startMajorIOV = self.request.GET.get('startMajorIOV')
-            startMinorIOV = self.request.GET.get('startMinorIOV')
-            endMajorIOV = self.request.GET.get('endMajorIOV')
-            endMinorIOV = self.request.GET.get('endMinorIOV')
+        # TODO:handle endIOVs -1 -1
+        q = {'major_iov__gte': start_major_iov, 'minor_iov__gte': start_minor_iov}
+        if end_major_iov != '-1':
+            q.update({'major_iov__lte': end_major_iov})
+        if end_minor_iov != '-1':
+            q.update({'minor_iov__lte': end_minor_iov})
 
-            #TODO:handle endIOVs -1 -1
-            q = {'major_iov__gte': startMajorIOV, 'minor_iov__gte': startMinorIOV}
-            if endMajorIOV != '-1':
-                q.update({'major_iov__lte': endMajorIOV})
-            if endMinorIOV != '-1':
-                q.update({'minor_iov__lte': endMinorIOV})
+        p_lists = PayloadList.objects.filter(global_tag__name=gt_name)
+        piov_ids = []
+        for pl in p_lists:
+            # piovs = PayloadIOV.objects.filter(payload_list = pl, major_iov__lte = endMajorIOV,
+            # minor_iov__lte=endMinorIOV, major_iov__gte = startMajorIOV,minor_iov__gte=startMinorIOV).values_list(
+            # 'id', flat=True)
+            q.update({'payload_list': pl})
+            piovs = PayloadIOV.objects.filter(**q).values_list('id', flat=True)
 
-            #plists = PayloadList.objects.filter(global_tag__id=globalTagId)
-            plists = PayloadList.objects.filter(global_tag__name=gtName)
-            piov_ids = []
-            for pl in plists:
+            if piovs:
+                piov_ids.extend(piovs)
 
-                #piovs = PayloadIOV.objects.filter(payload_list = pl, major_iov__lte = endMajorIOV,minor_iov__lte=endMinorIOV,
-                #                                  major_iov__gte = startMajorIOV,minor_iov__gte=startMinorIOV).values_list('id', flat=True)
-                q.update({'payload_list': pl})
-                piovs = PayloadIOV.objects.filter(**q).values_list('id', flat=True)
+        queryset = PayloadIOV.objects.filter(id__in=piov_ids)
 
-                if piovs:
-                    piov_ids.extend(piovs)
+        return PayloadList.objects.filter(global_tag__name=gt_name) \
+            .prefetch_related(Prefetch('payload_iov', queryset=queryset)) \
+            .filter(payload_iov__in=queryset).distinct()
 
-            piov_querset = PayloadIOV.objects.filter(id__in=piov_ids)
-
-            return PayloadList.objects.filter(global_tag__name=gtName).prefetch_related(Prefetch(
-                  'payload_iov',
-                  queryset=piov_querset
-                  )).filter(payload_iov__in=piov_querset).distinct()
-
-
-        def list(self, request):
-
-            queryset = self.get_queryset()
-            serializer = PayloadListReadSerializer(queryset, many=True)
-            return Response(serializer.data)
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = PayloadListReadSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class PayloadListAttachAPIView(UpdateAPIView):
-
     serializer_class = PayloadListCreateSerializer
 
     @transaction.atomic
@@ -493,51 +481,46 @@ class PayloadListAttachAPIView(UpdateAPIView):
         data = request.data
 
         try:
-            pList = PayloadList.objects.get(name=data['payload_list'])
-        except:
+            p_list = PayloadList.objects.get(name=data['payload_list'])
+        except KeyError:
             return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
-            gTag = GlobalTag.objects.get(name=data['global_tag'])
-        except:
+            global_tag = GlobalTag.objects.get(name=data['global_tag'])
+        except KeyError:
             return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        plType = pList.payload_type
+        pl_type = p_list.payload_type
 
-        #check if GT is unlocked
-        gtStatus = GlobalTagStatus.objects.get(id=gTag.status_id)
-        if gtStatus.name == 'locked' :
+        gt_status = GlobalTagStatus.objects.get(id=global_tag.status_id)
+        if gt_status.name == 'locked':
             return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        #check if GT is running
-        #if gTag.type_id == 'running' :
+
+        # check if GT is running
+        # if global_tag.type_id == 'running' :
         #    return Response({"detail": "Global Tag is running."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # check if the PayloadList of the same type is already attached. If yes then detach
+        PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type).update(global_tag=None)
+        p_list.global_tag = global_tag
 
+        # serializer.is_valid(raise_exception=True)
+        self.perform_update(p_list)
 
-        #check if the PayloadList of the same type is already attached. If yes then detach
-        PayloadList.objects.filter(global_tag=gTag, payload_type=plType).update(global_tag=None)
-        #gTag = GlobalTag.objects.get(name=data['global_tag'])
-        pList.global_tag = gTag
+        # Update time for the GT
+        self.perform_update(global_tag)
 
-        #print(serializer)
-        #serializer.is_valid(raise_exception=True)
-        self.perform_update(pList)
-
-        #Update time for the GT
-        self.perform_update(gTag)
-
-        serializer = PayloadListSerializer(pList)
-        #print(serializer.data['global_tag'])
-        #json = JSONRenderer().render(serializer.data)
+        serializer = PayloadListSerializer(p_list)
+        # print(serializer.data['global_tag'])
+        # json = JSONRenderer().render(serializer.data)
         ret = serializer.data
-        ret['global_tag'] = gTag.name
-        ret['payload_type'] = plType.name
+        ret['global_tag'] = global_tag.name
+        ret['payload_type'] = pl_type.name
 
-        #serializer.data['global_tag'] = gTag.name
+        # serializer.data['global_tag'] = gTag.name
         return Response(ret)
 
 
 class PayloadIOVAttachAPIView(UpdateAPIView):
-
     serializer_class = PayloadIOVSerializer
 
     @transaction.atomic
@@ -546,91 +529,112 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         data = request.data
 
         try:
-            pList = PayloadList.objects.get(name=data['payload_list'])
-        except:
+            p_list = PayloadList.objects.get(name=data['payload_list'])
+        except KeyError:
             return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
             piov = PayloadIOV.objects.get(id=data['piov_id'])
-        except:
+        except KeyError:
             return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         is_gt_locked = False
         # Check if PL is attached and GT is unlocked
-        if pList.global_tag:
-            gtStatus = GlobalTagStatus.objects.get(id=pList.global_tag.status_id)
-            if gtStatus.name == 'locked':
+        if p_list.global_tag:
+            gt_status = GlobalTagStatus.objects.get(id=p_list.global_tag.status_id)
+            if gt_status.name == 'locked':
                 is_gt_locked = True
 
+        list_piovs = PayloadIOV.objects.filter(payload_list=p_list)
 
-        list_piovs = PayloadIOV.objects.filter(payload_list=pList)
-
-        #Check if new PayloadIOV overlaps
-        if(is_gt_locked):
-
+        # Check if new PayloadIOV overlaps
+        if is_gt_locked:
             # Check if Payload with same start IOVs already attached
             piovs = list_piovs.filter(major_iov=piov.major_iov, minor_iov=piov.minor_iov)
-            if (piovs):
-                payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end  = piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end' )[0]
-                #err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
-                #          (major_iov, minor_iov, payload_url)
-                err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
-                          (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
+            if piovs:
+                payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
+                    piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
+                # err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
+                # (major_iov, minor_iov, payload_url)
+                err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
+                          "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                          (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
+                           major_iov, minor_iov, major_iov_end, minor_iov_end)
                 return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Special case for Online GT - allow open IOV recover last open IOV
             special_case = False
-            #if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
-            if((piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize):
+            # if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
+            if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:
                 piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
-                if(piovs):
-                    major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
-                    #if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
-                    if ((major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize):
+                if piovs:
+                    major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
+                    # if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
+                    if (major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize:
                         special_case = True
 
             if not special_case:
-                piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lt = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
-                if(piovs):
-                    payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end','minor_iov_end')[0]
-                    if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and (piov.minor_iov < minor_iov_end)):
-                        #err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided start IOVs: %d %d" % \
-                        #                      (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov, piov.minor_iov)
-                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
-                                  (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
+                piovs = list_piovs.filter(Q(major_iov__lt=piov.major_iov) |
+                                          Q(major_iov=piov.major_iov, minor_iov__lt=piov.minor_iov)) \
+                    .order_by('-major_iov', '-minor_iov')
+                if piovs:
+                    payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
+                        piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
+                    if (piov.major_iov < major_iov_end) or (
+                            (piov.major_iov == major_iov_end) and (piov.minor_iov < minor_iov_end)):
+                        # err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided
+                        # start IOVs: %d %d" % \ (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov,
+                        # piov.minor_iov)
+                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
+                                  "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                                  (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
+                                   major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
-                if (piovs):
-                    #major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
-                    payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end','minor_iov_end')[0]
-                    if (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and (piov.minor_iov_end > minor_iov)):
-                        #err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end IOVs: %d %d" % \
-                        #      (piov.payload_url, major_iov, minor_iov, piov.major_iov_end, piov.minor_iov_end)
-                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
-                                  (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end)
+                piovs = list_piovs.filter(Q(major_iov__gt=piov.major_iov) |
+                                          Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)) \
+                    .order_by('major_iov', 'minor_iov')
+                if piovs:
+                    # major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
+                    payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
+                        piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
+                    if (piov.major_iov_end > major_iov) or (
+                            (piov.major_iov_end == major_iov) and (piov.minor_iov_end > minor_iov)):
+                        # err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end
+                        # IOVs: %d %d" % \ (piov.payload_url, major_iov, minor_iov, piov.major_iov_end,
+                        # piov.minor_iov_end)
+                        err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
+                                  "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
+                                  (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
+                                   major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         else:
-            #piovs fully recovered with inserted to be detached
+            # piovs fully recovered with inserted to be detached
             piovs = list_piovs.filter(
-                Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)).filter(
-                Q(major_iov_end__lt=piov.major_iov_end) | Q(major_iov_end=piov.major_iov_end, minor_iov_end__lte=piov.minor_iov_end)).update(payload_list=None)
+                Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)) \
+                .filter(Q(major_iov_end__lt=piov.major_iov_end) | Q(major_iov_end=piov.major_iov_end,
+                                                                    minor_iov_end__lte=piov.minor_iov_end))\
+                .update(payload_list=None)
 
-            #cut the end iovs of the previous piov
-            piovs = list_piovs.filter( Q(major_iov__lt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__lte = piov.minor_iov) ).order_by('-major_iov', '-minor_iov')
-            if(piovs):
-                major_iov_end, minor_iov_end = piovs.values_list('major_iov_end','minor_iov_end')[0]
+            # cut the end iovs of the previous piov
+            piovs = list_piovs.filter(
+                Q(major_iov__lt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__lte=piov.minor_iov)).order_by(
+                '-major_iov', '-minor_iov')
+            if piovs:
+                major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
 
-                if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and ((piov.minor_iov < minor_iov_end) or (minor_iov_end == None))):
-                    #piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
+                if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and (
+                        (piov.minor_iov < minor_iov_end) or (minor_iov_end is None))):
+                    # piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
 
                     piovs[0].major_iov_end = piov.major_iov
                     piovs[0].minor_iov_end = piov.minor_iov
-                    piovs[0].save(update_fields=['major_iov_end','minor_iov_end'])
+                    piovs[0].save(update_fields=['major_iov_end', 'minor_iov_end'])
 
-                #Check if the new IOV is inserted inside the old one
-                if (piov.major_iov_end < major_iov_end) or ((piov.major_iov_end == major_iov_end) and (piov.minor_iov_end < minor_iov_end) ):
-                    #Create 3rd IOV same URL as 1st A-B(inserted)-A
+                # Check if the new IOV is inserted inside the old one
+                if (piov.major_iov_end < major_iov_end) or (
+                        (piov.major_iov_end == major_iov_end) and (piov.minor_iov_end < minor_iov_end)):
+                    # Create 3rd IOV same URL as 1st A-B(inserted)-A
 
                     third_piov = piovs[0]
                     third_piov.major_iov = piov.major_iov_end
@@ -640,61 +644,65 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     third_piov.id = None
                     third_piov.save()
 
-                    #serializer = self.get_serializer(data=third_piov)
-                    #serializer.is_valid(raise_exception=True)
-                    #self.perform_create(third_piov)
-
+                    # serializer = self.get_serializer(data=third_piov)
+                    # serializer.is_valid(raise_exception=True)
+                    # self.perform_create(third_piov)
 
             # cut the starting iovs of the next piov
-            piovs = list_piovs.filter( Q(major_iov__gt = piov.major_iov) | Q(major_iov = piov.major_iov, minor_iov__gt = piov.minor_iov) ).order_by('major_iov', 'minor_iov')
-            if (piovs):
+            piovs = list_piovs.filter(
+                Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)).order_by(
+                'major_iov', 'minor_iov')
+            if piovs:
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
-                if (piov.major_iov_end == None) or (piov.major_iov_end > major_iov) or ((piov.major_iov_end == major_iov) and ((piov.minor_iov_end > minor_iov) or (piov.minor_iov_end == None))):
-                    #piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
+                if (piov.major_iov_end is None) or (piov.major_iov_end > major_iov) or (
+                        (piov.major_iov_end == major_iov) and (
+                        (piov.minor_iov_end > minor_iov) or (piov.minor_iov_end is None))):
+                    # piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
                     piovs[0].major_iov = piov.major_iov_end
                     piovs[0].minor_iov = piov.minor_iov_end
-                    piovs[0].save(update_fields=['major_iov','minor_iov'])
+                    piovs[0].save(update_fields=['major_iov', 'minor_iov'])
 
-        piov.payload_list = pList
+        piov.payload_list = p_list
 
         self.perform_update(piov)
 
-        #Update time for the pL
-        self.perform_update(pList)
+        # Update time for the pL
+        self.perform_update(p_list)
 
         serializer = PayloadIOVSerializer(piov)
-        #print(serializer.data['global_tag'])
-        #json = JSONRenderer().render(serializer.data)
+        # print(serializer.data['global_tag'])
+        # json = JSONRenderer().render(serializer.data)
         ret = serializer.data
 
         return Response(ret)
 
+
 class GlobalTagChangeStatusAPIView(UpdateAPIView):
-
     serializer_class = GlobalTagCreateSerializer
-    def get_globalTag(self):
-        globalTagName = self.kwargs.get('globalTagName')
-        return GlobalTag.objects.get(name = globalTagName)
 
-    def get_gtStatus(self):
-        gtStatus = self.kwargs.get('newStatus')
-        return GlobalTagStatus.objects.get(name=gtStatus)
+    def get_global_tag(self):
+        global_tag_name = self.kwargs.get('globalTagName')
+        return GlobalTag.objects.get(name=global_tag_name)
 
-    #@transaction.atomic
+    def get_gt_status(self):
+        gt_status = self.kwargs.get('newStatus')
+        return GlobalTagStatus.objects.get(name=gt_status)
+
+    # @transaction.atomic
     def put(self, request, *args, **kwargs):
         try:
-            gTag = self.get_globalTag()
-        except:
+            gt = self.get_global_tag()
+        except KeyError:
             return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
-            gtStatus = self.get_gtStatus()
-        except:
+            gt_status = self.get_gt_status()
+        except KeyError:
             return Response({"detail": "GlobalTag Status not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        gTag.status = gtStatus
-        self.perform_update(gTag)
+        gt.status = gt_status
+        self.perform_update(gt)
 
-        serializer = GlobalTagCreateSerializer(gTag)
+        serializer = GlobalTagCreateSerializer(gt)
 
         return Response(serializer.data)
