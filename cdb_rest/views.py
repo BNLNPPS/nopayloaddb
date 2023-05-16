@@ -106,6 +106,38 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             ret = {"detail": "Global tag %s deleted." % gt.name}
         return Response(ret)
 
+class PayloadIOVDeleteAPIView(DestroyAPIView):
+    serializer_class = PayloadIOVSerializer
+    # permission_classes = [IsAuthenticated]
+    #lookup_url_kwargs = ('globalTagName','payloadType','major_iov','minor_iov','major_iov_end','minor_iov_end')
+    #lookup_fields = ('payload_list__global_tag__name','payload_list__payload_type__name',
+    #                 'major_iov','minor_iov','major_iov_end','minor_iov_end')
+
+    def get_object(self):
+
+        return PayloadIOV.objects.get(payload_list__global_tag__name=self.kwargs['globalTagName'],
+                                         payload_list__payload_type__name=self.kwargs['payloadType'],
+                                         major_iov=self.kwargs['major_iov'],
+                                         minor_iov=self.kwargs['minor_iov'],
+                                         major_iov_end=self.kwargs['major_iov_end'],
+                                         minor_iov_end=self.kwargs['minor_iov_end']
+                                         )
+
+    def destroy(self, request, *args, **kwargs):
+        piov = self.get_object()
+        if not piov:
+            return Response({"detail": "PayloadIOV isn't found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
+        gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
+
+        if gt_status.name == 'locked':
+            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        ret = self.perform_destroy(piov)
+        if not ret:
+            ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
+        return Response(ret)
+
 
 class GlobalTagsListAPIView(ListAPIView):
     serializer_class = GlobalTagListSerializer
@@ -689,7 +721,7 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         return GlobalTagStatus.objects.get(name=gt_status)
 
     # @transaction.atomic
-    def put(self, request, *args, **kwargs):
+    def put(self):
         try:
             gt = self.get_global_tag()
         except KeyError:
