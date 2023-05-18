@@ -128,11 +128,11 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
         if not piov:
             return Response({"detail": "PayloadIOV isn't found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
-        gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
+        #gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
+        #gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
 
-        if gt_status.name == 'locked':
-            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #if gt_status.name == 'locked':
+        #    return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(piov)
         if not ret:
             ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
@@ -266,7 +266,7 @@ class PayloadTypeListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
 
-class PayloadIOVListCreationAPIView(ListCreateAPIView):
+class PayloadIOVBulkCreationAPIViewListCreationAPIView(ListCreateAPIView):
     #    authentication_classes = ()
     #    permission_classes = ()
     serializer_class = PayloadIOVSerializer
