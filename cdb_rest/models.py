@@ -77,7 +77,7 @@ class PayloadList(models.Model):
     name = models.CharField(max_length=255, db_column='name', unique=True)
     description = models.CharField(max_length=255, db_column='description', null=True)
     global_tag = models.ForeignKey(GlobalTag, related_name='payload_lists', on_delete=models.CASCADE, null=True)
-    payload_type = models.ForeignKey(PayloadType, on_delete=models.CASCADE)
+    payload_type = models.ForeignKey(PayloadType, on_delete=models.PROTECT)
     created = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
 

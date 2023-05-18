@@ -138,6 +138,27 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
             ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
         return Response(ret)
 
+class PayloadTypeDeleteAPIView(DestroyAPIView):
+    serializer_class = PayloadTypeSerializer
+    # permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = 'payloadTypeName'
+    lookup_field = 'name'
+
+    #def get_queryset(self):
+    #    return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
+
+    def destroy(self, request, *args, **kwargs):
+        ptype = self.get_object()
+        print(ptype)
+        plists = GlobalTagStatus.objects.get(payload_type=ptype)
+        if plists:
+            return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        ret = self.perform_destroy(ptype)
+        if not ret:
+            ret = {"detail": "Payload Type %s deleted." % ptype.name}
+        return Response(ret)
+
+
 
 class GlobalTagsListAPIView(ListAPIView):
     serializer_class = GlobalTagListSerializer
@@ -266,7 +287,7 @@ class PayloadTypeListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
 
-class PayloadIOVBulkCreationAPIViewListCreationAPIView(ListCreateAPIView):
+class PayloadIOVListCreationAPIView(ListCreateAPIView):
     #    authentication_classes = ()
     #    permission_classes = ()
     serializer_class = PayloadIOVSerializer
