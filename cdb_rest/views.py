@@ -720,8 +720,8 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         gt_status = self.kwargs.get('newStatus')
         return GlobalTagStatus.objects.get(name=gt_status)
 
-    # @transaction.atomic
-    def put(self):
+    def put(self, request, *args, **kwargs):
+
         try:
             gt = self.get_global_tag()
         except KeyError:
