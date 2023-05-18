@@ -671,6 +671,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     third_piov = piovs[0]
                     third_piov.major_iov = piov.major_iov_end
                     third_piov.minor_iov = piov.minor_iov_end
+                    third_piov.comb_iov = Decimal(Decimal(third_piov.major_iov) + Decimal(third_piov.minor_iov) / 10 ** 19)
                     third_piov.major_iov_end = major_iov_end
                     third_piov.minor_iov_end = minor_iov_end
                     third_piov.id = None
@@ -692,9 +693,11 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     # piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
                     piovs[0].major_iov = piov.major_iov_end
                     piovs[0].minor_iov = piov.minor_iov_end
+                    piovs[0].comb_iov = Decimal(Decimal(piovs[0].major_iov) + Decimal(piovs[0].major_iov) / 10 ** 19)
                     piovs[0].save(update_fields=['major_iov', 'minor_iov'])
 
         piov.payload_list = p_list
+        piov.comb_iov = Decimal(Decimal(piov.major_iov) + Decimal(piov.minor_iov) / 10 ** 19)
 
         self.perform_update(piov)
 
