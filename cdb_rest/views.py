@@ -93,11 +93,16 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
     lookup_url_kwarg = 'globalTagName'
     lookup_field = 'name'
 
-    def get_queryset(self):
-        return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
+    def get_gtag(self):
+        try:
+            return GlobalTag.objects.get(name=self.kwargs['globalTagName'])
+        except GlobalTag.DoesNotExist:
+            return None
 
     def destroy(self, request, *args, **kwargs):
-        gt = self.get_object()
+        gt = self.get_gtag()
+
+
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
         if gt_status.name == 'locked':
             return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -115,13 +120,16 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
 
     def get_object(self):
 
-        return PayloadIOV.objects.get(payload_list__global_tag__name=self.kwargs['globalTagName'],
+        try:
+            return PayloadIOV.objects.get(payload_list__global_tag__name=self.kwargs['globalTagName'],
                                          payload_list__payload_type__name=self.kwargs['payloadType'],
                                          major_iov=self.kwargs['major_iov'],
                                          minor_iov=self.kwargs['minor_iov'],
                                          major_iov_end=self.kwargs['major_iov_end'],
                                          minor_iov_end=self.kwargs['minor_iov_end']
                                          )
+        except PayloadIOV.DoesNotExist:
+            return None
 
     def destroy(self, request, *args, **kwargs):
         piov = self.get_object()
@@ -141,16 +149,26 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
 class PayloadTypeDeleteAPIView(DestroyAPIView):
     serializer_class = PayloadTypeSerializer
     # permission_classes = [IsAuthenticated]
-    lookup_url_kwarg = 'payloadTypeName'
-    lookup_field = 'name'
+    #lookup_url_kwarg = 'payloadTypeName'
+    #lookup_field = 'name'
 
-    #def get_queryset(self):
-    #    return GlobalTag.objects.filter(name=self.kwargs['globalTagName'])
+    def get_ptype(self):
+        try:
+            return PayloadType.objects.get(name=self.kwargs['payloadTypeName'])
+        except PayloadType.DoesNotExist:
+            return None
+
+    def get_plists(self, ptype):
+        try:
+            return PayloadList.objects.filter(payload_type=ptype)
+        except PayloadList.DoesNotExist:
+            return None
 
     def destroy(self, request, *args, **kwargs):
-        ptype = self.get_object()
-        print(ptype)
-        plists = GlobalTagStatus.objects.get(payload_type=ptype)
+        ptype = self.get_ptype()
+        if not ptype:
+            return Response({"detail": "PayloadType isn't found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        plists = list(self.get_plists(ptype))
         if plists:
             return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(ptype)
