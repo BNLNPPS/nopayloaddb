@@ -7,7 +7,7 @@ from cdb_rest.views import PayloadIOVsORMMaxListAPIView, PayloadIOVsORMOrderByLi
     PayloadIOVDetailAPIView
 from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIView, PayloadIOVAttachAPIView
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
-from cdb_rest.views import GlobalTagDeleteAPIView, PayloadIOVDeleteAPIView
+from cdb_rest.views import GlobalTagDeleteAPIView, PayloadIOVDeleteAPIView, PayloadTypeDeleteAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
 from cdb_rest.views import TimeoutListAPIView
 
@@ -19,6 +19,7 @@ urlpatterns = [
     path('globalTag/<str:globalTagName>', GlobalTagByNameDetailAPIView.as_view(), name="global_tag_detail"),
     path('deleteGlobalTag/<str:globalTagName>', GlobalTagDeleteAPIView.as_view(), name="global_tag_delete"),
     path('deletePayloadIOV/<str:globalTagName>/<str:payloadType>/<int:major_iov>/<int:minor_iov>/<int:major_iov_end>/<int:minor_iov_end>',PayloadIOVDeleteAPIView.as_view(), name="payloadiov_delete"),
+    path('deletePayloadType/<str:payloadTypeName>', PayloadTypeDeleteAPIView.as_view(), name="payload_type_delete"),
     path('gtstatus', GlobalTagStatusCreationAPIView.as_view(), name="global_tag_status"),
     path('globalTags', GlobalTagsListAPIView.as_view(), name="global_tags_list"),
     path('gtPayloadLists/<str:globalTagName>', GlobalTagsPayloadListsListAPIView.as_view(), name="global_tag_payload_lists"),
