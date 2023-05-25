@@ -636,12 +636,15 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             special_case = False
             # if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
             if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:
-                piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
+                #piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
+                piovs = list_piovs.all().order_by('-comb_iov')
                 if piovs:
-                    major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
+                    comb_iov, major_iov_end, minor_iov_end = piovs.values_list('comb_iov', 'major_iov_end', 'minor_iov_end')[0]
                     # if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
                     if (major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize:
-                        special_case = True
+                        #If new open-ended IOV goes after the existing last IOV
+                        if comb_iov < piov.comb_iov:
+                            special_case = True
 
             if not special_case:
                 piovs = list_piovs.filter(Q(major_iov__lt=piov.major_iov) |
