@@ -563,14 +563,17 @@ class PayloadListAttachAPIView(UpdateAPIView):
         pl_type = p_list.payload_type
 
         gt_status = GlobalTagStatus.objects.get(id=global_tag.status_id)
-        if gt_status.name == 'locked':
-            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #if gt_status.name == 'locked':
+        #    return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # check if GT is running
         # if global_tag.type_id == 'running' :
         #    return Response({"detail": "Global Tag is running."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # check if the PayloadList of the same type is already attached. If yes then detach
+        if (PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type) and gt_status.name == 'locked'):
+            return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type).update(global_tag=None)
         p_list.global_tag = global_tag
 
@@ -645,6 +648,9 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                         #If new open-ended IOV goes after the existing last IOV
                         if comb_iov < piov.comb_iov:
                             special_case = True
+
+                #else:
+                #    special_case = True
 
             if not special_case:
                 piovs = list_piovs.filter(Q(major_iov__lt=piov.major_iov) |
