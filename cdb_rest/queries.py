@@ -1,5 +1,5 @@
 get_payload_iovs = '''
-SELECT pt.name AS payload_type_name, pi.payload_url, pi.checksum, pi.major_iov, pi.minor_iov, pi.major_iov_end, pi.minor_iov_end
+SELECT pt.name AS payload_type_name, pi.payload_url, pi.checksum, pi.size, pi.major_iov, pi.minor_iov, pi.major_iov_end, pi.minor_iov_end
 FROM "PayloadList" pl
 JOIN "GlobalTag" gt ON pl.global_tag_id = gt.id AND gt.name = %(my_gt)s
 JOIN LATERAL (
