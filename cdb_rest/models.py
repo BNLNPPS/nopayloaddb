@@ -95,7 +95,7 @@ class PayloadIOV(models.Model):
     id = models.BigAutoField(primary_key=True, db_column='id', unique=True)
     payload_url = models.CharField(max_length=255, db_column='payload_url')
     checksum = models.CharField(max_length=255, db_column='checksum')
-    size = models.BigIntegerField(max_length=255, db_column='size', null=True)
+    size = models.BigIntegerField(db_column='size', null=True)
     major_iov = models.BigIntegerField(db_column='major_iov')
     minor_iov = models.BigIntegerField(db_column='minor_iov')
     major_iov_end = models.BigIntegerField(db_column='major_iov_end')
