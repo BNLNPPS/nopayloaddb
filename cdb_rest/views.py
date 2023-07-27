@@ -101,7 +101,8 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         gt = self.get_gtag()
-
+        if not gt:
+            return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
         if gt_status.name == 'locked':
@@ -128,13 +129,13 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
                                          major_iov_end=self.kwargs['major_iov_end'],
                                          minor_iov_end=self.kwargs['minor_iov_end']
                                          )
-        except PayloadIOV.DoesNotExist:
+        except:
             return None
 
     def destroy(self, request, *args, **kwargs):
         piov = self.get_object()
         if not piov:
-            return Response({"detail": "PayloadIOV isn't found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         #gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
         #gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
@@ -167,7 +168,7 @@ class PayloadTypeDeleteAPIView(DestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         ptype = self.get_ptype()
         if not ptype:
-            return Response({"detail": "PayloadType isn't found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         plists = list(self.get_plists(ptype))
         if plists:
             return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
