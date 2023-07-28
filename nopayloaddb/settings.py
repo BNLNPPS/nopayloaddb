@@ -90,6 +90,9 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
         },
+        'console': {
+            'class': 'logging.StreamHandler',
+        }
     },
     'loggers': {
         'django': {
