@@ -28,3 +28,9 @@ jobs:
               run: |
                   cd nopayloadclient/build
                   ctest --verbose
+
+            - name: Capture server logs if tests fail
+              if: failure()   # This ensures the step runs only if a previous step failed
+              run: |
+                  cd nopayloaddb/
+                  docker-compose logs
