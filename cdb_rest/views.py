@@ -180,8 +180,14 @@ class PayloadListDeleteAPIView(DestroyAPIView):
 
     def get_plist(self):
         try:
-            return PayloadList.objects.get(payload=self.kwargs['payloadListName'])
+            return PayloadList.objects.get(name=self.kwargs['payloadListName'])
         except PayloadList.DoesNotExist:
+            return None
+
+    def get_piovs(self, plist):
+        try:
+            return PayloadIOV.objects.filter(payload_list=plist)
+        except PayloadIOV.DoesNotExist:
             return None
 
     def destroy(self, request, *args, **kwargs):
