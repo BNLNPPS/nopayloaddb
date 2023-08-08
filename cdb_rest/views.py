@@ -115,9 +115,6 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
 class PayloadIOVDeleteAPIView(DestroyAPIView):
     serializer_class = PayloadIOVSerializer
     # permission_classes = [IsAuthenticated]
-    #lookup_url_kwargs = ('globalTagName','payloadType','major_iov','minor_iov','major_iov_end','minor_iov_end')
-    #lookup_fields = ('payload_list__global_tag__name','payload_list__payload_type__name',
-    #                 'major_iov','minor_iov','major_iov_end','minor_iov_end')
 
     def get_object(self):
 
@@ -166,6 +163,7 @@ class PayloadTypeDeleteAPIView(DestroyAPIView):
             return None
 
     def destroy(self, request, *args, **kwargs):
+        ret = {}
         ptype = self.get_ptype()
         if not ptype:
             return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -177,7 +175,27 @@ class PayloadTypeDeleteAPIView(DestroyAPIView):
             ret = {"detail": "Payload Type %s deleted." % ptype.name}
         return Response(ret)
 
+class PayloadListDeleteAPIView(DestroyAPIView):
+    serializer_class = PayloadListSerializer
 
+    def get_plist(self):
+        try:
+            return PayloadList.objects.get(payload=self.kwargs['payloadListName'])
+        except PayloadList.DoesNotExist:
+            return None
+
+    def destroy(self, request, *args, **kwargs):
+        ret = {}
+        plist = self.get_plist()
+        if not plist:
+            return Response({"detail": "PayloadList %s doesn't exist" % self.kwargs['payloadListName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        piovs = list(self.get_piovs(plist))
+        if piovs:
+            return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        ret = self.perform_destroy(plist)
+        if not ret:
+            ret = {"detail": "Payload Type %s deleted." % plist.name}
+        return Response(ret)
 
 class GlobalTagsListAPIView(ListAPIView):
     serializer_class = GlobalTagListSerializer
