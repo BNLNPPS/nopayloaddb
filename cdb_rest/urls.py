@@ -18,6 +18,7 @@ urlpatterns = [
     path('gt/<int:pk>', GlobalTagDetailAPIView.as_view(), name="global_tag_detail"),
     path('globalTag/<str:globalTagName>', GlobalTagByNameDetailAPIView.as_view(), name="global_tag_detail"),
     path('deleteGlobalTag/<str:globalTagName>', GlobalTagDeleteAPIView.as_view(), name="global_tag_delete"),
+    path('deletePayloadIOV/<str:globalTagName>/<str:payloadType>/<int:major_iov>/<int:minor_iov>',PayloadIOVDeleteAPIView.as_view(), name="payloadiov_delete"),
     path('deletePayloadIOV/<str:globalTagName>/<str:payloadType>/<int:major_iov>/<int:minor_iov>/<int:major_iov_end>/<int:minor_iov_end>',PayloadIOVDeleteAPIView.as_view(), name="payloadiov_delete"),
     path('deletePayloadType/<str:payloadTypeName>', PayloadTypeDeleteAPIView.as_view(), name="payload_type_delete"),
     path('deletePayloadList/<str:payloadListName>', PayloadListDeleteAPIView.as_view(), name="payload_list_delete"),
