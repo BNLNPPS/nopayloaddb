@@ -118,14 +118,20 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
 
     def get_object(self):
 
+        if 'major_iov_end' not in self.kwargs:
+            self.kwargs['major_iov_end'] = sys.maxsize
+        if 'minor_iov_end' not in self.kwargs:
+            self.kwargs['minor_iov_end'] = sys.maxsize
+
         try:
-            return PayloadIOV.objects.get(payload_list__global_tag__name=self.kwargs['globalTagName'],
-                                         payload_list__payload_type__name=self.kwargs['payloadType'],
-                                         major_iov=self.kwargs['major_iov'],
-                                         minor_iov=self.kwargs['minor_iov'],
-                                         major_iov_end=self.kwargs['major_iov_end'],
-                                         minor_iov_end=self.kwargs['minor_iov_end']
-                                         )
+            return PayloadIOV.objects.get(
+                payload_list__global_tag__name=self.kwargs['globalTagName'],
+                payload_list__payload_type__name=self.kwargs['payloadType'],
+                major_iov=self.kwargs['major_iov'],
+                minor_iov=self.kwargs['minor_iov'],
+                major_iov_end=self.kwargs['major_iov_end'],
+                minor_iov_end=self.kwargs['minor_iov_end']
+            )
         except:
             return None
 
