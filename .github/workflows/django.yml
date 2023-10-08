@@ -18,7 +18,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: nopayloaddb
       - name: Run Django
         run: |
-          cd nopayloaddb_prod/
+          cd nopayloaddb/
           python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
