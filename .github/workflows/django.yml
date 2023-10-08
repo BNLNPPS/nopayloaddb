@@ -48,7 +48,7 @@ jobs:
           POSTGRES_PORT: 5432
         run: |
           cd nopayloaddb/
-          python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+          python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000 &
       - name: Access Django API
         run: |
           curl http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Test&majorIOV=0&minorIOV=0”
