@@ -15,6 +15,11 @@ jobs:
           POSTGRES_PASSWORD: password
           POSTGRES_HOST: db
           POSTGRES_PORT: 5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v3
@@ -26,6 +31,8 @@ jobs:
           pip install -r requirements.txt
       - name: Change permissions of /var/log/
         run: sudo chmod a+w /var/log/
+      - name: Wait for PostgreSQL to become ready
+        run: until pg_isready -h db -p 5432; do sleep 2; done
       - name: Run Django
         env:
           POSTGRES_DB: dbname
