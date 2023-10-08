@@ -15,29 +15,41 @@ jobs:
           POSTGRES_PASSWORD: password
           POSTGRES_HOST: db
           POSTGRES_PORT: 5432
+
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
-      npdb:
-        build: .
+    steps:
+      - name: Install PostgreSQL Client
+        run: sudo apt-get install -y postgresql-client
+      - name: Test PostgreSQL Connection
+        run: psql "host=db user=login dbname=dbname password=password"
+      - uses: actions/checkout@v3
+        with:
+          path: nopayloaddb
+      - name: Install Dependencies
+        run: |
+          cd nopayloaddb/
+          pip install -r requirements.txt
+      - name: Change permissions of /var/log/
+        run: sudo chmod a+w /var/log/
+      - name: Wait for PostgreSQL to become ready
+        #run: until pg_isready -h db -p 5432; do sleep 2; done
+        run: |
+          until echo '\q' | PGPASSWORD=password psql -h db -U login -d dbname -p 5432; do
+              echo "Waiting for PostgreSQL..."
+              sleep 2
+          done
+      - name: Run Django
         env:
           POSTGRES_DB: dbname
           POSTGRES_USER: login
           POSTGRES_PASSWORD: password
           POSTGRES_HOST: db
           POSTGRES_PORT: 5432
-        depends_on:
-          db:
-            condition: service_healthy
-        ports:
-          - 8000:8000
-
-    steps:
-      - name: Run Django
         run: |
-            python manage.py makemigrations cdb_rest
-            python manage.py migrate
-            python manage.py runserver 0.0.0.0:8000
+          cd nopayloaddb/
+          python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
