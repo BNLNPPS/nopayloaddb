@@ -24,6 +24,8 @@ jobs:
         run: |
           cd nopayloaddb/
           pip install -r requirements.txt
+      - name: Change permissions of /var/log/
+        run: sudo chmod a+w /var/log/
       - name: Run Django
         run: |
           cd nopayloaddb/
