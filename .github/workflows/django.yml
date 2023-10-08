@@ -9,8 +9,12 @@ jobs:
     services:
       db:
         image: postgres
-        env_file: .env
-
+        env:
+          POSTGRES_DB: dbname
+          POSTGRES_USER: login
+          POSTGRES_PASSWORD: password
+          POSTGRES_HOST: db
+          POSTGRES_PORT: 5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -19,16 +23,21 @@ jobs:
 
       npdb:
         build: .
-        entrypoint: [ "/bin/sh", "-c" ]
-        command:
-          - |
-            python manage.py makemigrations cdb_rest
-            python manage.py migrate
-            python manage.py runserver 0.0.0.0:8000
-        ports:
-          - 8000:8000
-        restart: always
+        env:
+          POSTGRES_DB: dbname
+          POSTGRES_USER: login
+          POSTGRES_PASSWORD: password
+          POSTGRES_HOST: db
+          POSTGRES_PORT: 5432
         depends_on:
           db:
             condition: service_healthy
-        env_file: .env
+        ports:
+          - 8000:8000
+
+    steps:
+      - name: Run Django
+        run: |
+            python manage.py makemigrations cdb_rest
+            python manage.py migrate
+            python manage.py runserver 0.0.0.0:8000
