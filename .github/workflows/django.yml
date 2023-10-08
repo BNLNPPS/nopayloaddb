@@ -20,5 +20,5 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run Django
         run: |
-          cd nopayloaddb/
+          cd nopayloaddb_prod/
           python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
