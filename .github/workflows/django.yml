@@ -6,19 +6,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-  services:
-    db:
-      image: postgres
-      env:
-        POSTGRES_DB: dbname
-        POSTGRES_USER: login
-        POSTGRES_PASSWORD: password
-        POSTGRES_HOST: db
-        POSTGRES_PORT: 5432
+    services:
+      db:
+        image: postgres
+        env:
+          POSTGRES_DB: dbname
+          POSTGRES_USER: login
+          POSTGRES_PASSWORD: password
+          POSTGRES_HOST: db
+          POSTGRES_PORT: 5432
 
-  steps:
-    - uses: actions/checkout@v3
-    - name: Run Django
-      run: |
-        cd nopayloaddb/
-        python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Django
+        run: |
+          cd nopayloaddb/
+          python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
