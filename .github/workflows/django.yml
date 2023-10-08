@@ -32,11 +32,13 @@ jobs:
           pip install -r requirements.txt
       - name: Change permissions of /var/log/
         run: sudo chmod a+w /var/log/
-      - name: Dump db logs
-        if: always()
-        run: docker logs db
       - name: Wait for PostgreSQL to become ready
-        run: until pg_isready -h db -p 5432; do sleep 2; done
+        #run: until pg_isready -h db -p 5432; do sleep 2; done
+        run: |
+          until echo '\q' | PGPASSWORD=password psql -h db -U login -d dbname -p 5432; do
+              echo "Waiting for PostgreSQL..."
+              sleep 2
+          done
       - name: Run Django
         env:
           POSTGRES_DB: dbname
