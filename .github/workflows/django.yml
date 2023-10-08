@@ -13,7 +13,7 @@ jobs:
           POSTGRES_DB: dbname
           POSTGRES_USER: login
           POSTGRES_PASSWORD: password
-          POSTGRES_HOST: db
+          POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
         ports:
           - 5432:5432
@@ -27,7 +27,7 @@ jobs:
       - name: Install PostgreSQL Client
         run: sudo apt-get install -y postgresql-client
       - name: Test PostgreSQL Connection
-        run: psql "host=db user=login dbname=dbname password=password"
+        run: psql "host=localhost user=login dbname=dbname password=password"
       - uses: actions/checkout@v3
         with:
           path: nopayloaddb
