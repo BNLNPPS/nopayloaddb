@@ -26,22 +26,24 @@ Example of read call to get last Payload for Global tag "sPHENIX_ExampleGT_24" a
 
 ## How to start the services
 
-The npdb web app can be built and started by using `docker-compose` within the
+The npdb web app can be built and started by using `docker compose` within the
 cloned repository:
 
 ```shell
-docker-compose up --build
+docker compose up --build
 ```
 
 This option may be preferred for local development and tests. In order to stop
 the services run the following command:
 
 ```shell
-docker-compose down
+docker compose down
 ```
+In Docker Compose V1 one may need to use `docker-compose`; see details on
+[migrating to Docker Compose V2](https://docs.docker.com/compose/migrate/)
 
 The database and web services can be also started individually. The following
-commands are essentially equivalent to the above procedure with `docker-compose`
+commands are essentially equivalent to the above procedure with `docker compose`
 and are shown here for the reference:
 
 ```shell
