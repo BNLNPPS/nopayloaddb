@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'changetosomething'
+SECRET_KEY = os.environ.get("JWT_SECRET",       default='secret')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -137,9 +137,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'cdb_rest.authentication.CustomJWTAuthentication',
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    #'DEFAULT_PERMISSION_CLASSES': (
+    #    'rest_framework.permissions.IsAuthenticated',
+    #),
 
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
@@ -165,7 +165,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': os.environ.get("JWT_SECRET",       default='secret'),
+    'SIGNING_KEY': SECRET_KEY ,
     'VERIFYING_KEY': None,
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'AUTH_HEADER_TYPES': ('Bearer',),
