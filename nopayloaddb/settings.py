@@ -134,12 +134,12 @@ REST_FRAMEWORK = {
 #    'DEFAULT_AUTHENTICATION_CLASSES': (
 #        'rest_framework.authentication.TokenAuthentication',
 #    ),
-    #'DEFAULT_AUTHENTICATION_CLASSES': (
-    #    'cdb_rest.authentication.CustomJWTAuthentication',
-    #),
-    #'DEFAULT_PERMISSION_CLASSES': (
-    #    'rest_framework.permissions.IsAuthenticated',
-    #),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'cdb_rest.authentication.CustomJWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
@@ -164,13 +164,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 SIMPLE_JWT = {
-    #'SIGNING_KEY': settings.SECRET_KEY,
-    #ZZ'VERIFYING_KEY':SECRET_KEY,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': os.environ.get("JWT_SECRET",       default='secret'),
+    'VERIFYING_KEY': None,
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-
-    #'JTI_CLAIM': 'jti',
 }
 
 
