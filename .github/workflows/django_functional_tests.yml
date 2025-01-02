@@ -41,11 +41,21 @@ jobs:
       #  run: until pg_isready -h localhost -p 5432; do sleep 2; done
       - name: Run Django
         env:
-          POSTGRES_DB: dbname
-          POSTGRES_USER: login
-          POSTGRES_PASSWORD: password
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
+          POSTGRES_DB_W: dbname
+          POSTGRES_DB_R1: dbname
+          POSTGRES_DB_R2: dbname
+          POSTGRES_USER_W: login
+          POSTGRES_USER_R1: login
+          POSTGRES_USER_R2: login
+          POSTGRES_PASSWORD_W: password
+          POSTGRES_PASSWORD_R1: password
+          POSTGRES_PASSWORD_R2: password
+          POSTGRES_HOST_W: localhost
+          POSTGRES_HOST_R1: localhost
+          POSTGRES_HOST_R2: localhost
+          POSTGRES_PORT_W: 5432
+          POSTGRES_PORT_R1: 5432
+          POSTGRES_PORT_R2: 5432
         run: |
           cd nopayloaddb/
           python manage.py makemigrations cdb_rest && python manage.py migrate && python manage.py runserver 0.0.0.0:8000 &
