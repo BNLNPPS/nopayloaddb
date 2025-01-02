@@ -53,8 +53,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #My middleware
-    'nopayloaddb.middleware.RequestMiddleware',
 ]
 
 ROOT_URLCONF = 'nopayloaddb.urls'
@@ -118,54 +116,19 @@ WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 #    }
 #}
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#
-#
-#        'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
-#        'USER':     os.environ.get("POSTGRES_USER",     default='login'),
-#        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
-#        'HOST':     os.environ.get("POSTGRES_HOST",     default='localhost'),
-#        'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
-#
-#    }
-#}
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
 
 
-        'NAME':     os.environ.get("POSTGRES_DB_W",       default='dbname'),
-        'USER':     os.environ.get("POSTGRES_USER_W",     default='login'),
-        'PASSWORD': os.environ.get("POSTGRES_PASSWORD_W", default='password'),
-        'HOST':     os.environ.get("POSTGRES_HOST_W",     default='localhost'),
-        'PORT':     os.environ.get("POSTGRES_PORT_W",     default='5432'),
-    },
-    'read_db_1': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME':     os.environ.get("POSTGRES_DB",       default='dbname'),
+        'USER':     os.environ.get("POSTGRES_USER",     default='login'),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", default='password'),
+        'HOST':     os.environ.get("POSTGRES_HOST",     default='localhost'),
+        'PORT':     os.environ.get("POSTGRES_PORT",     default='5432'),
 
-
-        'NAME':     os.environ.get("POSTGRES_DB_R1",       default='dbname'),
-        'USER':     os.environ.get("POSTGRES_USER_R1",     default='login'),
-        'PASSWORD': os.environ.get("POSTGRES_PASSWORD_R1", default='password'),
-        'HOST':     os.environ.get("POSTGRES_HOST_R1",     default='localhost'),
-        'PORT':     os.environ.get("POSTGRES_PORT_R1",     default='5432'),
-    },
-    'read_db_2': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-
-
-        'NAME':     os.environ.get("POSTGRES_DB_R2",       default='dbname'),
-        'USER':     os.environ.get("POSTGRES_USER_R2",     default='login'),
-        'PASSWORD': os.environ.get("POSTGRES_PASSWORD_R2", default='password'),
-        'HOST':     os.environ.get("POSTGRES_HOST_R2",     default='localhost'),
-        'PORT':     os.environ.get("POSTGRES_PORT_R2",     default='5432'),
-    },
+    }
 }
-
-DATABASE_ROUTERS = ['nopayloaddb.db_router.ReadWriteRouter']
 
 REST_FRAMEWORK = {
 #    'DEFAULT_AUTHENTICATION_CLASSES': (
