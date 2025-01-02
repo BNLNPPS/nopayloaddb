@@ -1,8 +1,6 @@
 import random
 from nopayloaddb.middleware import get_current_request
 
-logger = logging.getLogger(__name__)
-
 class ReadWriteRouter:
     def db_for_read(self, model, **hints):
         """Route read queries to one of the read databases."""
