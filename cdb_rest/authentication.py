@@ -28,3 +28,33 @@ class CustomJWTAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed('invalid signature')
         except jwt.InvalidTokenError:
             raise exceptions.AuthenticationFailed('invalid access_token')
+
+class IndigoIAMAuthentication(BaseAuthentication):
+    """
+    Minimal implementation for Indigo IAM token authentication.
+    """
+
+    def authenticate(self, request):
+        authorization_header = request.headers.get('Authorization')
+        if not authorization_header or not authorization_header.startswith("Bearer "):
+            return None  # No token provided
+
+        token = authorization_header.split('Bearer ')[1]
+
+        try:
+            # Fetch JWKS dynamically
+            jwks = requests.get(settings.IAM_JWKS_ENDPOINT).json()
+
+            # Decode and validate token
+            payload = jwt.decode(
+                token,
+                jwks,
+                algorithms=["RS256"],
+                audience=settings.IAM_AUDIENCE,
+                issuer=settings.IAM_ISSUER,
+            )
+            return (payload, None)  # Return decoded token payload
+        except JWTError:
+            raise AuthenticationFailed("Invalid Indigo IAM token.")
+        except requests.RequestException:
+            raise AuthenticationFailed("Unable to fetch JWKS for token verification.")
