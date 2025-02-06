@@ -4,11 +4,12 @@ from nopayloaddb.middleware import get_current_request
 class ReadWriteRouter:
     def db_for_read(self, model, **hints):
         """Route read queries to one of the read databases."""
-        db = random.choice(['read_db_1', 'read_db_2'])
+        # Redirect everything to default
+        #db = random.choice(['read_db_1', 'read_db_2'])
         # Check if request information is available
-        request = get_current_request()
-        if request and request.method == 'GET':
-            return db
+        #request = get_current_request()
+        #if request and request.method == 'GET':
+        #        return db
         return 'default'
 
     def db_for_write(self, model, **hints):

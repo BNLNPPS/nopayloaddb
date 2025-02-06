@@ -1,5 +1,8 @@
 import sys
 import time
+import random
+
+from django.conf import settings
 
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
@@ -13,7 +16,7 @@ from rest_framework import status
 # from rest_framework.permissions import IsAuthenticated, AllowAny
 # from cdb_rest.authentication import CustomJWTAuthentication
 
-from django.db import transaction, connection
+from django.db import transaction, connection, connections
 
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -522,12 +525,19 @@ class PayloadIOVsORMOrderByListAPIView(ListAPIView):
 class PayloadIOVsSQLListAPIView(ListAPIView):
 
     def list(self, request):
-        with connection.cursor() as cursor:
+        # Get available read databases (excluding "default")
+        read_dbs = [db for db in settings.DATABASES.keys() if db.startswith("read_db_")]
+
+        # If at least one read database is available, use it; otherwise, use "default"
+        read_db = random.choice(read_dbs) if read_dbs else "default"
+
+        with connections[read_db].cursor() as cursor:
             cursor.execute(cdb_rest.queries.get_payload_iovs,
                            {'my_major_iov': self.request.GET.get('majorIOV'),
                             'my_minor_iov': self.request.GET.get('minorIOV'),
                             'my_gt': self.request.GET.get('gtName')})
             row = cursor.fetchall()
+
         return Response(row)
 
 
