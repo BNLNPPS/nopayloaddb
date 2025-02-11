@@ -1,3 +1,7 @@
+# Nopayloaddb
+
+The nopayloaddb project works as an implementation of the Conditions Database reference for the [HEP Software Foundation](https://hepsoftwarefoundation.org/). It provides a RESTful API for managing payloads, global tags, payload types, and associated data. The API allows clients to perform CRUD operations on these resources.
+
 ## Current release 
 
 Current release tag is 0.0.6
