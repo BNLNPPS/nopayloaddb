@@ -39,8 +39,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    "sphinx_rtd_theme"
+    'sphinx.ext.ifconfig'
 ]
 
 source_suffix = '.rst'
@@ -66,7 +65,6 @@ pygments_style = None
 # a list of builtin themes.
 #
 #html_theme = 'alabaster'
-#html_theme = "sphinx_rtd_theme"
 html_theme = "sphinx_book_theme"
 #html_theme = 'corlab_theme'
 
