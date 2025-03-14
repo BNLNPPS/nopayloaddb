@@ -18,6 +18,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Change permissions of /var/log/
+        run: sudo chmod a+w /var/log/
+
       # Build the documentation
       - name: Build the documentation
         run: |
