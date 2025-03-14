@@ -15,3 +15,11 @@ This documentation is under development.
 
    installation
    api
+
+.. toctree::
+   :maxdepth: 1
+   :caption: CDB Reference:
+
+   cdb_models
+   cdb_views
+

@@ -14,10 +14,15 @@
 #
 import os
 import sys
-#sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../'))
+#sys.path.insert(0, os.path.abspath('..'))
 
-#import nopayloaddb
-#import corlab_theme
+import nopayloaddb
+import cdb_rest
+import django
+os.environ['DJANGO_SETTINGS_MODULE'] = 'nopayloaddb.settings'
+django.setup()
+
 
 # -- Project information -----------------------------------------------------
 
@@ -39,7 +44,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig'
+    'sphinx.ext.ifconfig',
+    'sphinxcontrib_django'
 ]
 
 source_suffix = '.rst'
