@@ -26,3 +26,11 @@ jobs:
           pip install -r requirements.txt
           cd docs
           make html
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-docs
+          path: docs/build/html/
+
+  # Deploy the documentation
