@@ -1,12 +1,10 @@
 name: Documentation
 
 on:
-  - push
-
-#  pull_request:
-#  push:
-#    branches:
-#      - master
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   build-pages:
@@ -49,4 +47,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        #if: github.ref == 'refs/heads/master'
+        # Deploy only if the branch is master
+        if: github.ref == 'refs/heads/master'
