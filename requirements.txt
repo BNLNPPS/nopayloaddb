@@ -7,4 +7,4 @@ PyJWT==2.6.0
 pytz==2023.3
 sqlparse==0.4.3
 typing_extensions==4.5.0
-
+sphinx_book_theme>=1.1
