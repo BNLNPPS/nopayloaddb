@@ -54,8 +54,12 @@ class GlobalTagByNameDetailAPIView(RetrieveAPIView):
 
 class TimeoutListAPIView(ListAPIView):
 
-    def list(self, request):
-        time.sleep(1800)
+    def list(self, request, seconds):
+        if seconds > 1800:
+            seconds = 1800
+        elif seconds < 0:
+            return Response({"detail": "Timeout should be greater than 0."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        time.sleep(seconds)
         return Response()
 
 
