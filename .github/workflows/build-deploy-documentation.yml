@@ -1,0 +1,54 @@
+name: Documentation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      - name: Change permissions of /var/log/
+        run: sudo chmod a+w /var/log/
+
+      # Build the documentation
+      - name: Build the documentation
+        run: |
+          pip install -r requirements.txt
+          cd docs
+          make html
+
+      - name: Upload artifacts
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build/html/
+
+  # Deploy the documentation
+  deploy-page:
+    runs-on: ubuntu-latest
+    needs: build-pages
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # Deploy only if the branch is master
+        if: github.ref == 'refs/heads/master'
