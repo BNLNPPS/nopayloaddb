@@ -45,6 +45,6 @@ urlpatterns = [
     path('payloadiovs_orm_max/', PayloadIOVsORMMaxListAPIView.as_view(), name="payloadiovs_orm_max"),
     # path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
-    path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
+    path('timeout/<int:seconds>', TimeoutListAPIView.as_view(), name="timeout"),
 
 ]
