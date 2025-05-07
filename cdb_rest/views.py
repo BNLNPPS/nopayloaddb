@@ -21,6 +21,8 @@ from django.db import transaction, connection, connections
 from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import Max
+from django.forms.models import model_to_dict
+
 # from django.db.models import QuerySet
 # from django.forms.models import model_to_dict
 
@@ -89,15 +91,11 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "GlobalTag creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        result = self.get_serializer(instance)
         # Re-validate the saved instance
-        if not result.is_valid():
-            return Response({
-                "detail": "Saved GlobalTag instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "GlobalTag was not saved to DB."}, status=500)
 
-        ret = result.data
+        ret = serializer.data
         ret['status'] = gt_status.name
 
         return Response(ret)
@@ -283,15 +281,11 @@ class GlobalTagStatusCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "GlobalTagStatus creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        result = self.get_serializer(instance)
         # Re-validate the saved instance
-        if not result.is_valid():
-            return Response({
-                "detail": "Saved GlobalTagStatus instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "GlobalTagStatus was not saved to DB."}, status=500)
 
-        return Response(result.data)
+        return Response(serializer.data)
 
 
 class PayloadListListCreationAPIView(ListCreateAPIView):
@@ -336,15 +330,11 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        result = self.get_serializer(instance)
         # Re-validate the saved instance
-        if not result.is_valid():
-            return Response({
-                "detail": "Saved PayloadList instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
-        ret = result.data
+        ret = serializer.data
         ret['payload_type'] = payload_type.name
 
         return Response(ret)
@@ -378,15 +368,11 @@ class PayloadTypeListCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadType creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        result = self.get_serializer(instance)
-        # Re-validate the saved instance
-        if not result.is_valid():
-            return Response({
-                "detail": "Saved PayloadType instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+         # Re-validate the saved instance
+        if instance.pk is None:
+            return Response({"detail": "PayloadType was not saved to DB."}, status=500)
 
-        return Response(result.data)
+        return Response(serializer.data)
 
 
 class PayloadIOVListCreationAPIView(ListCreateAPIView):
@@ -429,15 +415,13 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadIOV creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        result = self.get_serializer(instance)
-        # Re-validate the saved instance
-        if not result.is_valid():
-            return Response({
-                "detail": "Saved PayloadIOV instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
 
-        ret = result.data
+        # Re-validate the saved instance
+        if instance.pk is None:
+            return Response({"detail": "PayloadIOV was not saved to DB."}, status=500)
+
+        ret = serializer.data
+
         return Response(ret)
 
 
@@ -520,7 +504,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
         global_tag.name = self.get_clone_name()
         global_tag.status = GlobalTagStatus.objects.get(name='unlocked')
         #self.perform_create(global_tag)
-        serializer = GlobalTagCreateSerializer(global_tag)
+        serializer = GlobalTagCreateSerializer(instance=global_tag, data=model_to_dict(global_tag))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -529,12 +513,8 @@ class GlobalTagCloneAPIView(CreateAPIView):
             return Response({"detail": "GlobalTag creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = GlobalTagCreateSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Saved GlobalTag instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "GlobalTag was not saved to DB."}, status=500)
 
         for p_list in payload_lists:
             payload_iovs = self.get_payload_iovs(p_list)
@@ -543,7 +523,8 @@ class GlobalTagCloneAPIView(CreateAPIView):
             p_list.name = str(p_list.payload_type) + '_' + str(p_list_id)
             p_list.global_tag = global_tag
             #self.perform_create(p_list)
-            serializer = PayloadListCreateSerializer(p_list)
+
+            serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
             serializer.is_valid(raise_exception=True)
 
             try:
@@ -551,21 +532,17 @@ class GlobalTagCloneAPIView(CreateAPIView):
             except Exception as e:
                 return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # Re-validate the saved instance
-            instance_serializer = PayloadListCreateSerializer(instance)
-            if not instance_serializer.is_valid():
-                return Response({
-                    "detail": "Saved PayloadList instance is invalid.",
-                    "errors": instance_serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
 
-            rp = []
-            for payload in payload_iovs:
-                payload.id = None
-                payload.payload_list = p_list
-                rp.append(payload)
+        # Re-validate the saved instance
+        if instance.pk is None:
+            return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
-            PayloadIOV.objects.bulk_create(rp)
+        rp = []
+        for payload in payload_iovs:
+            payload.id = None
+            payload.payload_list = p_list
+            rp.append(payload)
+        PayloadIOV.objects.bulk_create(rp)
 
         serializer = GlobalTagListSerializer(global_tag)
 
@@ -714,7 +691,8 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         # serializer.is_valid(raise_exception=True)
         #self.perform_update(p_list)
-        serializer = PayloadListCreateSerializer(p_list)
+
+        serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -723,17 +701,13 @@ class PayloadListAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadList update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = PayloadListCreateSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Updated PayloadList instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+        if instance.pk is None:
+            return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
         # Update time for the GT
         #self.perform_update(global_tag)
-        serializer = GlobalTagCreateSerializer(global_tag)
+
+        serializer = GlobalTagCreateSerializer(instance=global_tag, data=model_to_dict(global_tag))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -742,12 +716,8 @@ class PayloadListAttachAPIView(UpdateAPIView):
             return Response({"detail": "GlobalTag update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = GlobalTagCreateSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Updated GlobalTag instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "GlobalTag was not updated in the DB."}, status=500)
 
         serializer = PayloadListSerializer(p_list)
         # print(serializer.data['global_tag'])
@@ -914,7 +884,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         piov.comb_iov = Decimal(Decimal(piov.major_iov) + Decimal(piov.minor_iov) / 10 ** 19)
 
         #self.perform_update(piov)
-        serializer = PayloadIOVSerializer(piov)
+        serializer = PayloadIOVSerializer(instance=piov, data=model_to_dict(piov))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -923,16 +893,12 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadIOV update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = PayloadIOVSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Updated PayloadIOV instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "PayloadIOV was not updated in the DB."}, status=500)
 
         # Update time for the pL
         #self.perform_update(p_list)
-        serializer = PayloadListCreateSerializer(p_list)
+        serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -941,12 +907,8 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadList update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = PayloadListCreateSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Updated PayloadList instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "PayloadList was not updated in the DB."}, status=500)
 
         serializer = PayloadIOVSerializer(piov)
         # print(serializer.data['global_tag'])
@@ -981,7 +943,7 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
 
         gt.status = gt_status
         #self.perform_update(gt)
-        serializer = GlobalTagCreateSerializer(gt)
+        serializer = GlobalTagCreateSerializer(instance=gt, data=model_to_dict(gt))
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -990,13 +952,9 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
             return Response({"detail": "GlobalTag update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Re-validate the saved instance
-        instance_serializer = GlobalTagCreateSerializer(instance)
-        if not instance_serializer.is_valid():
-            return Response({
-                "detail": "Updated GlobalTag instance is invalid.",
-                "errors": instance_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if instance.pk is None:
+            return Response({"detail": "GlobalTag was not updated in the DB."}, status=500)
 
         #serializer = GlobalTagCreateSerializer(gt)
 
-        return Response(instance_serializer.data)
+        return Response(serializer.data)
