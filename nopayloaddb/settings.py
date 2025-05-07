@@ -104,6 +104,11 @@ LOGGING = {
         },
     },
 }
+if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
+    LOGGING['loggers']['django']['handlers'] = ['console']
+    LOGGING['loggers']['django']['level'] = 'INFO'
+    LOGGING['loggers']['django']['propagate'] = False
+
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
