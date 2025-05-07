@@ -415,11 +415,13 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadIOV creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
         # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadIOV was not saved to DB."}, status=500)
 
         ret = serializer.data
+
         return Response(ret)
 
 
@@ -521,6 +523,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
             p_list.name = str(p_list.payload_type) + '_' + str(p_list_id)
             p_list.global_tag = global_tag
             #self.perform_create(p_list)
+
             serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
             serializer.is_valid(raise_exception=True)
 
@@ -528,6 +531,7 @@ class GlobalTagCloneAPIView(CreateAPIView):
                 instance = serializer.save()
             except Exception as e:
                 return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
         # Re-validate the saved instance
         if instance.pk is None:
@@ -538,7 +542,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
             payload.id = None
             payload.payload_list = p_list
             rp.append(payload)
-
         PayloadIOV.objects.bulk_create(rp)
 
         serializer = GlobalTagListSerializer(global_tag)
@@ -688,6 +691,7 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         # serializer.is_valid(raise_exception=True)
         #self.perform_update(p_list)
+
         serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
         serializer.is_valid(raise_exception=True)
 
@@ -700,9 +704,9 @@ class PayloadListAttachAPIView(UpdateAPIView):
         if instance.pk is None:
             return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
-
         # Update time for the GT
         #self.perform_update(global_tag)
+
         serializer = GlobalTagCreateSerializer(instance=global_tag, data=model_to_dict(global_tag))
         serializer.is_valid(raise_exception=True)
 
