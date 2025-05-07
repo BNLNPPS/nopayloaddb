@@ -104,6 +104,11 @@ LOGGING = {
         },
     },
 }
+if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
+    LOGGING['loggers']['django']['handlers'] = ['console']
+    LOGGING['loggers']['django']['level'] = 'INFO'
+    LOGGING['loggers']['django']['propagate'] = False
+
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
@@ -164,6 +169,18 @@ DATABASES = {
         'PORT':     os.environ.get("POSTGRES_PORT_R2",     default='5432'),
     },
 }
+
+# Read database configurations
+if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.environ.get("POSTGRES_DB", "dbname_project1"),
+        'USER': os.environ.get("POSTGRES_USER", "user_project1"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", "password_project1"),
+        'HOST': os.environ.get("POSTGRES_HOST", "localhost"),
+        'PORT': os.environ.get("POSTGRES_PORT", "5432"),
+    }
+
 
 DATABASE_ROUTERS = ['nopayloaddb.db_router.ReadWriteRouter']
 
