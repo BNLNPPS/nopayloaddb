@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  ai_service:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile_AI
+    container_name: ai_service
+    ports:
+      - "8000:8000" # Adjust the port as needed
+    depends_on:
+      - db 
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

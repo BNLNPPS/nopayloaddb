@@ -3,7 +3,8 @@ Django==4.2
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.2.2
 psycopg>=3.0.0
-psycopg2==2.8.6
+psycopg2-binary==2.9.10
+# psycopg2==2.8.6
 PyJWT==2.6.0
 pytz==2023.3
 sqlparse==0.4.3
