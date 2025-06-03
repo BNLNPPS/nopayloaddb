@@ -529,18 +529,21 @@ class GlobalTagCloneAPIView(CreateAPIView):
             except Exception as e:
                 return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
-        if instance.pk is None:
-            return Response({"detail": "PayloadList was not saved to DB."}, status=500)
+            # Re-validate the saved instance
+            if instance.pk is None:
+                return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
-        rp = []
-        for payload in payload_iovs:
-            payload.id = None
-            payload.payload_list = p_list
-            rp.append(payload)
-
-        PayloadIOV.objects.bulk_create(rp)
-
+            rp = []
+            for payload in payload_iovs:
+                payload.id = None
+                payload.payload_list = p_list
+                rp.append(payload)
+                
+            try:
+                PayloadIOV.objects.bulk_create(rp)
+            except Exception as e:
+                return Response({"detail": "PayloadIOV bulk creation failed."}, status=500)
+            
         serializer = GlobalTagListSerializer(global_tag)
 
         return Response(serializer.data)
