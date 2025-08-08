@@ -119,8 +119,9 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
-        if gt_status.name == 'locked':
-            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #Locked and Frozen GTs are immutable
+        if gt_status.name in ['locked', 'frozen']:
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(gt)
         if not ret:
             ret = {"detail": "Global tag %s deleted." % gt.name}
@@ -154,11 +155,11 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
         if not piov:
             return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        #gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
-        #gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
+        gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
+        gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
 
-        #if gt_status.name == 'locked':
-        #    return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if gt_status.name == 'frozen':
+            return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(piov)
         if not ret:
             ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
@@ -678,12 +679,8 @@ class PayloadListAttachAPIView(UpdateAPIView):
         pl_type = p_list.payload_type
 
         gt_status = GlobalTagStatus.objects.get(id=global_tag.status_id)
-        #if gt_status.name == 'locked':
-        #    return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        # check if GT is running
-        # if global_tag.type_id == 'running' :
-        #    return Response({"detail": "Global Tag is running."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if gt_status.name == 'frozen':
+            return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # check if the PayloadList of the same type is already attached. If yes then detach
         if (PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type) and gt_status.name == 'locked'):
@@ -756,6 +753,9 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             gt_status = GlobalTagStatus.objects.get(id=p_list.global_tag.status_id)
             if gt_status.name == 'locked':
                 is_gt_locked = True
+            elif gt_status.name == 'frozen':
+                return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
 
         list_piovs = PayloadIOV.objects.filter(payload_list=p_list)
 
