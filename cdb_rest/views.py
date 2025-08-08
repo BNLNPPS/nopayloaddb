@@ -128,6 +128,8 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
         return Response(ret)
 
 class PayloadIOVDeleteAPIView(DestroyAPIView):
+    """Delete PayloadIOV by globalTagName, payloadType, major_iov, minor_iov, major_iov_end, minor_iov_end
+    """ 
     serializer_class = PayloadIOVSerializer
     # permission_classes = [IsAuthenticated]
 
@@ -219,6 +221,9 @@ class PayloadListDeleteAPIView(DestroyAPIView):
         piovs = list(self.get_piovs(plist))
         if piovs:
             return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        gt = plist.global_tag
+        if gt:
+            return Response({"detail": "PayloadList is attached to GlobalTag %s" % gt.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
         ret = self.perform_destroy(plist)
         if not ret:
             ret = {"detail": "Payload Type %s deleted." % plist.name}
@@ -432,6 +437,8 @@ class PayloadIOVDetailAPIView(RetrieveAPIView):
 
 
 class PayloadIOVBulkCreationAPIView(CreateAPIView):
+    """Create multiple PayloadIOVs in bulk. TEST API
+    """
     # authentication_classes = ()
     # permission_classes = ()
     serializer_class = PayloadIOVSerializer
@@ -948,7 +955,7 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         #self.perform_update(gt)
         serializer = GlobalTagCreateSerializer(instance=gt, data=model_to_dict(gt))
         serializer.is_valid(raise_exception=True)
-
+        #Save the instance
         try:
             instance = serializer.save()
         except Exception as e:
