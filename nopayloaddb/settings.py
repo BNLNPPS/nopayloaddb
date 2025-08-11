@@ -104,6 +104,11 @@ LOGGING = {
         },
     },
 }
+if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
+    LOGGING['loggers']['django']['handlers'] = ['console']
+    LOGGING['loggers']['django']['level'] = 'INFO'
+    LOGGING['loggers']['django']['propagate'] = False
+
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
@@ -142,6 +147,8 @@ DATABASES = {
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD_W", default='password'),
         'HOST':     os.environ.get("POSTGRES_HOST_W",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_W",     default='5432'),
+
+        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
     },
     'read_db_1': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -152,6 +159,8 @@ DATABASES = {
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD_R1", default='password'),
         'HOST':     os.environ.get("POSTGRES_HOST_R1",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_R1",     default='5432'),
+
+        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
     },
     'read_db_2': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -162,8 +171,24 @@ DATABASES = {
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD_R2", default='password'),
         'HOST':     os.environ.get("POSTGRES_HOST_R2",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_R2",     default='5432'),
+
+        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
     },
 }
+
+# Read database configurations
+if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.environ.get("POSTGRES_DB", "dbname_project1"),
+        'USER': os.environ.get("POSTGRES_USER", "user_project1"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", "password_project1"),
+        'HOST': os.environ.get("POSTGRES_HOST", "localhost"),
+        'PORT': os.environ.get("POSTGRES_PORT", "5432"),
+
+        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
+    }
+
 
 DATABASE_ROUTERS = ['nopayloaddb.db_router.ReadWriteRouter']
 
