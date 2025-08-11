@@ -38,6 +38,8 @@ import cdb_rest.queries
 
 from .iov_comparisons import get_iov_config, compute_comb_iov
 
+#Permissions plugin
+from .utils import load_permission_plugin
 
 class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
@@ -972,7 +974,7 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         #serializer = GlobalTagCreateSerializer(gt)
 
         return Response(serializer.data)
-    
+
 class CDBSettingAPIView(APIView):
 
     def get(self, request, name):
