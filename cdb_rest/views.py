@@ -34,7 +34,8 @@ from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSer
 from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
 import cdb_rest.queries
-
+#Permissions plugin
+from .utils import load_permission_plugin
 
 class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
@@ -961,3 +962,17 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         #serializer = GlobalTagCreateSerializer(gt)
 
         return Response(serializer.data)
+
+#Temporary example class  
+#def my_write_view(request):
+#    plugin = load_permission_plugin()
+#    auth_context = getattr(request, "user", None)  # This is the auth_context returned by CustomJWTAuthentication
+#
+#    target_object = request.POST.get("object_name")
+#    context = {"target_object": target_object}
+#
+#    if plugin.has_permission(request, context, auth_context):
+#        # proceed with the write
+#        return Response({"status": "success"}, status=status.HTTP_200_OK)
+#    else:
+#        return Response({"status": "forbidden"}, status=status.HTTP_403_FORBIDDEN)

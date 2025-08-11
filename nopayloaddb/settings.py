@@ -206,6 +206,7 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
+PERMISSION_PLUGIN_CLASS = "myapp.permission_plugins.belle2.DummyPermissionPlugin"
 
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
