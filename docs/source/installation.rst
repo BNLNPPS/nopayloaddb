@@ -3,201 +3,648 @@
 Installation
 ============
 
-This guide provides instructions on how to set up the Nopayloaddb project for development or deployment. You can choose between a manual setup or using Docker Compose (recommended for development).
+This guide provides comprehensive instructions for setting up the Nopayloaddb project. Choose the installation method that best fits your needs:
+
+- **Quick Start with Docker** (Recommended): Get up and running in minutes
+- **Manual Installation**: For development or custom setups
+- **Production Deployment**: For production environments
+
+.. note::
+   **TL;DR - Quick Start**: If you just want to try Nopayloaddb quickly, jump to :ref:`docker-quickstart`.
+
+.. _docker-quickstart:
+
+Quick Start with Docker (Recommended)
+--------------------------------------
+
+The fastest way to get Nopayloaddb running:
+
+**Prerequisites:**
+- Docker and Docker Compose installed on your system
+
+**Steps:**
+
+1. **Clone and Setup:**
+   
+   .. code-block:: bash
+
+      git clone https://github.com/BNLNPPS/nopayloaddb.git
+      cd nopayloaddb
+
+2. **Create Environment File:**
+   
+   .. code-block:: bash
+
+      cat > .env << 'EOF'
+      # Basic configuration for development
+      SECRET_KEY='development-secret-key-change-in-production'
+      DJANGO_LOGPATH='/tmp'
+      
+      # Database configuration
+      POSTGRES_DB_W=nopayloaddb
+      POSTGRES_USER_W=npdb
+      POSTGRES_PASSWORD_W=password
+      POSTGRES_HOST_W=db
+      POSTGRES_PORT_W=5432
+      EOF
+
+3. **Start the Application:**
+   
+   .. code-block:: bash
+
+      docker-compose up --build
+
+4. **Access the Application:**
+   
+   Open your browser to http://localhost:8000
+
+   **API Endpoints:**
+   - API Documentation: http://localhost:8000/api/cdb_rest/
+   - Sample API call: 
+     
+     .. code-block:: bash
+     
+        curl http://localhost:8000/api/cdb_rest/gt
+
+That's it! You now have Nopayloaddb running with a PostgreSQL database.
+
+To stop the application:
+
+.. code-block:: bash
+
+   docker-compose down
+
+.. _manual-installation:
 
 Manual Installation
 -------------------
 
-Follow these steps for a traditional manual setup.
+For developers who want more control or need to customize the setup.
 
-**Prerequisites:**
+.. _prerequisites:
 
-*   **Python:** Version 3.8 or higher is recommended (Python 3.9 is used in the Dockerfile).
-*   **pip:** Python package installer.
-*   **Git:** Version control system.
-*   **PostgreSQL:** Database server. Ensure the `psycopg` build prerequisites are met (e.g., `libpq-dev` and `python3-dev` on Debian/Ubuntu, `postgresql-devel` and `python3-devel` on Fedora/CentOS). Check the `psycopg` documentation for details.
+Prerequisites
+~~~~~~~~~~~~~
 
-**Steps:**
+System Requirements
+^^^^^^^^^^^^^^^^^^^
 
-1.  **Clone the Repository:**
-    .. code-block:: bash
+**Required Software:**
 
-       git clone <repository-url>  # Replace <repository-url> with the actual URL
-       cd nopayloaddb
+- **Python 3.8+** (Python 3.9+ recommended)
+- **PostgreSQL 12+** (13+ recommended for better performance)
+- **Git** (for cloning the repository)
 
-2.  **Virtual Environment:**
-    It is highly recommended to use a virtual environment:
-    .. code-block:: bash
+**System Dependencies:**
 
-       python -m venv venv
-       source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+The following system packages are required for PostgreSQL connectivity:
 
-3.  **Install Dependencies:**
-    Install requirements using pip:
-    .. code-block:: bash
+.. tabs::
 
-       pip install -r requirements.txt
+   .. tab:: Ubuntu/Debian
+   
+      .. code-block:: bash
+      
+         sudo apt-get update
+         sudo apt-get install -y \
+             python3-dev \
+             libpq-dev \
+             postgresql \
+             postgresql-contrib \
+             git
 
-4.  **Database Setup:**
-    *   **Create PostgreSQL Databases and Users:** Log in to your PostgreSQL server. The application is configured in `nopayloaddb/settings.py` to use separate write (`default`) and read replica databases (`read_db_1`, `read_db_2`). You'll need to create the database(s) and user(s) accordingly.
+   .. tab:: CentOS/RHEL/Fedora
+   
+      .. code-block:: bash
+      
+         # CentOS/RHEL
+         sudo yum install -y \
+             python3-devel \
+             postgresql-devel \
+             postgresql-server \
+             postgresql-contrib \
+             git
+             
+         # Fedora
+         sudo dnf install -y \
+             python3-devel \
+             postgresql-devel \
+             postgresql-server \
+             postgresql-contrib \
+             git
 
-        *Example for the write database:*
-        .. code-block:: sql
+   .. tab:: macOS
+   
+      .. code-block:: bash
+      
+         # Using Homebrew
+         brew install postgresql git
+         
+         # Start PostgreSQL service
+         brew services start postgresql
 
-           -- Replace 'dbname_w', 'login_w', 'password_w' with your desired values
-           CREATE DATABASE dbname_w;
-           CREATE USER login_w WITH PASSWORD 'password_w';
-           GRANT ALL PRIVILEGES ON DATABASE dbname_w TO login_w;
-           -- Optional, may be needed on some systems:
-           -- ALTER ROLE login_w CREATEDB;
+   .. tab:: Windows
+   
+      1. Install PostgreSQL from https://www.postgresql.org/download/windows/
+      2. Install Git from https://git-scm.com/download/win
+      3. Install Python from https://www.python.org/downloads/
 
-        Repeat the process or configure PostgreSQL replication for the read databases (`dbname_r1`, `dbname_r2`) and create corresponding read-only users (`login_r1`, `login_r2`) if you intend to use the read replica feature. For simple development, you can configure all `DATABASES` entries in `settings.py` to point to the same database, but ensure the environment variables match.
+Installation Steps
+~~~~~~~~~~~~~~~~~~
 
-    *   **Run Migrations:** Apply the database schema migrations using the `default` (write) database connection. Make sure your environment variables for the write database are set correctly first (see Configuration section).
-        .. code-block:: bash
+1. **Clone the Repository**
+   
+   .. code-block:: bash
 
-           # Ensure environment variables are set (e.g., source .env)
-           python manage.py migrate
+      git clone https://github.com/BNLNPPS/nopayloaddb.git
+      cd nopayloaddb
 
-5.  **Configuration:**
-    The application relies heavily on environment variables, defined in `nopayloaddb/settings.py`.
+2. **Create Virtual Environment**
+   
+   .. code-block:: bash
 
-    *   **Essential Variables:**
-        *   `SECRET_KEY`: **Required.** A unique, secret key. The default `'changetosomething'` in `settings.py` is **insecure** and must be overridden.
-        *   `DJANGO_LOGPATH`: Path for log files (defaults to `/var/log`). Ensure write permissions.
+      python3 -m venv venv
+      
+      # Activate virtual environment
+      # Linux/macOS:
+      source venv/bin/activate
+      
+      # Windows:
+      # venv\Scripts\activate
 
-    *   **Database Variables:** Specific variables are expected for write (`_W`) and read replicas (`_R1`, `_R2`):
-        *   `POSTGRES_DB_W`, `POSTGRES_USER_W`, `POSTGRES_PASSWORD_W`, `POSTGRES_HOST_W`, `POSTGRES_PORT_W`
-        *   `POSTGRES_DB_R1`, `POSTGRES_USER_R1`, `POSTGRES_PASSWORD_R1`, `POSTGRES_HOST_R1`, `POSTGRES_PORT_R1`
-        *   `POSTGRES_DB_R2`, `POSTGRES_USER_R2`, `POSTGRES_PASSWORD_R2`, `POSTGRES_HOST_R2`, `POSTGRES_PORT_R2`
+   .. tip::
+      Always use a virtual environment to avoid conflicts with system packages.
 
-    *   **Setting Environment Variables:**
-        *   **Directly in shell:** (Temporary)
-          .. code-block:: bash
+3. **Install Python Dependencies**
+   
+   .. code-block:: bash
 
-             export SECRET_KEY='your-very-strong-secret-key'
-             export POSTGRES_DB_W='dbname_w'
-             # ... etc.
+      pip install --upgrade pip
+      pip install -r requirements.txt
 
-        *   **Using `.env` file:** Create/modify `.env` in the project root. **Important:** The example `.env` provided uses generic names (e.g., `POSTGRES_DB`). You **must** update it to use the specific names from `settings.py` (e.g., `POSTGRES_DB_W`). Use `export KEY=VALUE` format if you plan to load variables using `source .env`.
+4. **Database Setup**
 
-          *Example `.env` for manual setup (using `source`):*
-          .. code-block:: bash
+   **Create PostgreSQL Database and User:**
 
-             export SECRET_KEY='your-very-strong-secret-key'
-             export DJANGO_LOGPATH='/path/to/your/logs'
+   .. code-block:: bash
 
-             export POSTGRES_DB_W=dbname_w
-             export POSTGRES_USER_W=login_w
-             export POSTGRES_PASSWORD_W=password_w
-             export POSTGRES_HOST_W=localhost
-             export POSTGRES_PORT_W=5432
+      # Connect to PostgreSQL as superuser
+      sudo -u postgres psql
 
-             # Add R1/R2 variables if using read replicas
-             # export POSTGRES_DB_R1=dbname_r1
-             # ... etc.
+   .. code-block:: psql
 
-          Load variables before running commands:
-          .. code-block:: bash
+      -- Create database
+      CREATE DATABASE nopayloaddb_dev;
+      
+      -- Create user with password
+      CREATE USER npdb_dev WITH PASSWORD 'secure_dev_password';
+      
+      -- Grant privileges
+      GRANT ALL PRIVILEGES ON DATABASE nopayloaddb_dev TO npdb_dev;
+      
+      -- Exit PostgreSQL
+      \q
 
-             source .env
-             python manage.py migrate
-             python manage.py runserver
+   .. note::
+      For production, use separate read/write users. See :ref:`production-database-setup`.
 
-        *   **Deployment System:** Use systemd, Kubernetes secrets, etc. for production.
+5. **Environment Configuration**
 
-6.  **Running the Development Server:**
-    Ensure environment variables are loaded:
-    .. code-block:: bash
+   Create a `.env` file in the project root:
 
-       # Example: source .env
-       python manage.py runserver
+   .. code-block:: bash
 
-    Access at `http://127.0.0.1:8000/`.
+      cat > .env << 'EOF'
+      # Security
+      SECRET_KEY='your-very-secure-secret-key-here'
+      
+      # Logging
+      DJANGO_LOGPATH='/tmp'
+      
+      # Write Database (Primary)
+      POSTGRES_DB_W=nopayloaddb_dev
+      POSTGRES_USER_W=npdb_dev
+      POSTGRES_PASSWORD_W=secure_dev_password
+      POSTGRES_HOST_W=localhost
+      POSTGRES_PORT_W=5432
+      
+      # Read Replicas (Optional - can use same values as write DB for development)
+      POSTGRES_DB_R1=nopayloaddb_dev
+      POSTGRES_USER_R1=npdb_dev
+      POSTGRES_PASSWORD_R1=secure_dev_password
+      POSTGRES_HOST_R1=localhost
+      POSTGRES_PORT_R1=5432
+      
+      POSTGRES_DB_R2=nopayloaddb_dev
+      POSTGRES_USER_R2=npdb_dev
+      POSTGRES_PASSWORD_R2=secure_dev_password
+      POSTGRES_HOST_R2=localhost
+      POSTGRES_PORT_R2=5432
+      EOF
 
+   .. warning::
+      **Generate a secure SECRET_KEY**: You can generate one using:
+      
+      .. code-block:: bash
+      
+         python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 
-Using Docker Compose (Recommended for Development)
---------------------------------------------------
+6. **Apply Database Migrations**
 
-The project includes `Dockerfile` and `docker-compose.yml` for a containerized setup.
+   .. code-block:: bash
 
-**Prerequisites:**
+      # Load environment variables
+      source .env
+      
+      # Apply migrations
+      python manage.py migrate
 
-*   **Docker:** Install Docker Desktop (Windows, macOS) or Docker Engine (Linux).
-*   **Docker Compose:** Usually included with Docker Desktop, or install separately.
+7. **Create Superuser (Optional)**
 
-**Steps:**
+   .. code-block:: bash
 
-1.  **Clone the Repository:** (If you haven't already)
-    .. code-block:: bash
+      python manage.py createsuperuser
 
-       git clone <repository-url>
-       cd nopayloaddb
+8. **Run Development Server**
 
-2.  **Configure Environment Variables (`.env`):**
-    `docker-compose.yml` loads variables from the `.env` file. **Crucially**, ensure the variables match those expected by `nopayloaddb/settings.py`. Use `KEY=VALUE` format (no `export` needed for Docker Compose).
+   .. code-block:: bash
 
-    *   **Rename variables:** Change generic names (e.g., `POSTGRES_DB`) to specific ones (e.g., `POSTGRES_DB_W`).
-    *   **Set `POSTGRES_HOST_W`:** Set `POSTGRES_HOST_W=db` (matches the database service name in `docker-compose.yml`).
-    *   **Add `SECRET_KEY`:** Add a `SECRET_KEY` variable.
-    *   **Add Read Replicas (Optional):** Add `POSTGRES_*_R1` and `POSTGRES_*_R2` variables if needed. Note: The default `docker-compose.yml` only sets up one database service (`db`). You would need to modify it to add replica services and configure replication.
-    *   **Add `DJANGO_LOGPATH` (Optional):** Set `DJANGO_LOGPATH` (e.g., `/npdb/logs`).
+      python manage.py runserver
 
-    *Example `.env` for Docker Compose:*
-    .. code-block:: bash
+   Access the application at http://127.0.0.1:8000/
 
-       # Use KEY=VALUE format
-       SECRET_KEY='your-development-secret-key'
-       DJANGO_LOGPATH='/npdb/logs' # Example path inside container
+Docker Compose Setup (Detailed)
+--------------------------------
 
-       # Write Database (_W variables matching settings.py)
-       POSTGRES_DB_W=dbname
-       POSTGRES_USER_W=login
-       POSTGRES_PASSWORD_W=password
-       POSTGRES_HOST_W=db # Service name from docker-compose.yml
-       POSTGRES_PORT_W=5432
+For a more robust development environment with persistent data and easier management.
 
-       # Optional: Add R1/R2 variables if needed and configured
-       # POSTGRES_DB_R1=dbname
-       # POSTGRES_USER_R1=login
-       # ... etc.
+Prerequisites
+~~~~~~~~~~~~~
 
-3.  **Build and Run Containers:**
-    From the project root directory:
-    .. code-block:: bash
+**Install Docker:**
 
-       docker-compose up --build -d # -d runs in detached mode
+.. tabs::
 
-    This builds the `webapp` image, starts `db` and `webapp` services. The `webapp` service runs migrations and starts the development server automatically (see `command` in `docker-compose.yml`).
+   .. tab:: Linux
+   
+      .. code-block:: bash
+      
+         # Ubuntu/Debian
+         curl -fsSL https://get.docker.com -o get-docker.sh
+         sudo sh get-docker.sh
+         sudo usermod -aG docker $USER
+         
+         # Install Docker Compose
+         sudo curl -L "https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+         sudo chmod +x /usr/local/bin/docker-compose
 
-4.  **Access the Application:**
-    Access at `http://localhost:8000` or `http://127.0.0.1:8000`.
+   .. tab:: macOS
+   
+      Download and install Docker Desktop from https://www.docker.com/products/docker-desktop/
 
-5.  **View Logs:**
-    .. code-block:: bash
+   .. tab:: Windows
+   
+      Download and install Docker Desktop from https://www.docker.com/products/docker-desktop/
 
-       docker-compose logs -f webapp # Stream logs from webapp service
+Setup Steps
+~~~~~~~~~~~
 
-6.  **Stopping Containers:**
-    .. code-block:: bash
+1. **Clone Repository**
 
-       docker-compose down
+   .. code-block:: bash
 
-    To remove containers and the database volume (deleting all data):
-    .. code-block:: bash
+      git clone https://github.com/BNLNPPS/nopayloaddb.git
+      cd nopayloaddb
 
-       docker-compose down -v
+2. **Configure Environment Variables**
 
+   Create a comprehensive `.env` file:
 
-Deployment
+   .. code-block:: bash
+
+      cat > .env << 'EOF'
+      # Django Configuration
+      SECRET_KEY='your-docker-development-secret-key'
+      DJANGO_LOGPATH='/npdb/logs'
+      DEBUG=True
+      
+      # Database Configuration
+      POSTGRES_DB_W=nopayloaddb
+      POSTGRES_USER_W=npdb
+      POSTGRES_PASSWORD_W=secure_password_123
+      POSTGRES_HOST_W=db
+      POSTGRES_PORT_W=5432
+      
+      # Read replicas (using same DB for development)
+      POSTGRES_DB_R1=nopayloaddb
+      POSTGRES_USER_R1=npdb
+      POSTGRES_PASSWORD_R1=secure_password_123
+      POSTGRES_HOST_R1=db
+      POSTGRES_PORT_R1=5432
+      
+      POSTGRES_DB_R2=nopayloaddb
+      POSTGRES_USER_R2=npdb
+      POSTGRES_PASSWORD_R2=secure_password_123
+      POSTGRES_HOST_R2=db
+      POSTGRES_PORT_R2=5432
+      EOF
+
+3. **Start Services**
+
+   .. code-block:: bash
+
+      # Build and start in foreground
+      docker-compose up --build
+      
+      # Or start in background (detached mode)
+      docker-compose up --build -d
+
+4. **Verify Installation**
+
+   .. code-block:: bash
+
+      # Check running services
+      docker-compose ps
+      
+      # Check logs
+      docker-compose logs webapp
+      
+      # Test API endpoint
+      curl http://localhost:8000/api/cdb_rest/
+
+5. **Managing the Development Environment**
+
+   .. code-block:: bash
+
+      # View logs in real-time
+      docker-compose logs -f webapp
+      
+      # Execute commands in the webapp container
+      docker-compose exec webapp python manage.py shell
+      
+      # Create a superuser
+      docker-compose exec webapp python manage.py createsuperuser
+      
+      # Run migrations (if needed)
+      docker-compose exec webapp python manage.py migrate
+      
+      # Stop services
+      docker-compose down
+      
+      # Remove all data (caution!)
+      docker-compose down -v
+
+Environment Variables Reference
+-------------------------------
+
+Complete reference for all supported environment variables:
+
+Core Settings
+~~~~~~~~~~~~~
+
+.. list-table::
+   :widths: 25 50 25
+   :header-rows: 1
+
+   * - Variable
+     - Description
+     - Default
+   * - ``SECRET_KEY``
+     - Django secret key (**required**)
+     - ``'changetosomething'`` (insecure)
+   * - ``DEBUG``
+     - Enable Django debug mode
+     - ``False``
+   * - ``DJANGO_LOGPATH``
+     - Path for Django log files
+     - ``'/var/log'``
+
+Database Configuration
+~~~~~~~~~~~~~~~~~~~~~~
+
+**Write Database (Primary):**
+
+.. list-table::
+   :widths: 25 50 25
+   :header-rows: 1
+
+   * - Variable
+     - Description
+     - Default
+   * - ``POSTGRES_DB_W``
+     - Write database name
+     - ``'dbname'``
+   * - ``POSTGRES_USER_W``
+     - Write database user
+     - ``'login'``
+   * - ``POSTGRES_PASSWORD_W``
+     - Write database password
+     - ``'password'``
+   * - ``POSTGRES_HOST_W``
+     - Write database host
+     - ``'localhost'``
+   * - ``POSTGRES_PORT_W``
+     - Write database port
+     - ``'5432'``
+
+**Read Replicas (Optional):**
+
+Replace ``_W`` with ``_R1`` or ``_R2`` for read replica configuration.
+
+.. _production-database-setup:
+
+Production Deployment
+---------------------
+
+.. warning::
+   **This section is for production deployments only.** Do not use these settings for development.
+
+For production environments, additional security and performance considerations apply:
+
+Security Checklist
+~~~~~~~~~~~~~~~~~~~
+
+- **Never use DEBUG=True in production**
+- **Use a secure, randomly generated SECRET_KEY**
+- **Configure HTTPS/TLS encryption**
+- **Use separate database users for read/write operations**
+- **Set proper file permissions on configuration files**
+- **Use environment-specific secret management**
+
+Production Configuration Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # Production environment variables (store securely)
+   SECRET_KEY='your-production-secret-key-50-characters-long'
+   DEBUG=False
+   DJANGO_LOGPATH='/var/log/nopayloaddb'
+   
+   # Production database (write)
+   POSTGRES_DB_W=nopayloaddb_prod
+   POSTGRES_USER_W=npdb_write
+   POSTGRES_PASSWORD_W='very-secure-write-password'
+   POSTGRES_HOST_W=db-primary.example.com
+   POSTGRES_PORT_W=5432
+   
+   # Production read replicas
+   POSTGRES_DB_R1=nopayloaddb_prod
+   POSTGRES_USER_R1=npdb_read
+   POSTGRES_PASSWORD_R1='very-secure-read-password'
+   POSTGRES_HOST_R1=db-replica1.example.com
+   POSTGRES_PORT_R1=5432
+
+**Helm Charts for Production (Recommended)**
+
+For production deployments on Kubernetes/OpenShift, we recommend using the official Helm charts:
+
+.. code-block:: bash
+
+   # Clone the official Helm charts
+   git clone https://github.com/BNLNPPS/nopayloaddb-charts.git
+   cd nopayloaddb-charts
+   
+   # Choose your experiment configuration:
+   # For sPHENIX:
+   cp your-values.yaml npdbchart_sphenix/values.yaml
+   helm install sphenix-npdb npdbchart_sphenix/
+   
+   # For Belle2:
+   cp your-values.yaml npdbchart_belle2_java/values.yaml  
+   helm install belle2-npdb npdbchart_belle2_java/
+
+The Helm charts include:
+
+- Pre-configured security settings
+- Database setup and migration jobs
+- Monitoring and health checks
+- Experiment-specific configurations
+- Load balancing and scaling options
+
+For detailed production deployment instructions, see :doc:`deployment`.
+
+Troubleshooting
+---------------
+
+Common Issues and Solutions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Database Connection Errors**
+
+.. code-block:: text
+
+   django.db.utils.OperationalError: could not connect to server
+
+**Solutions:**
+
+1. Verify PostgreSQL is running:
+   
+   .. code-block:: bash
+   
+      # Linux/macOS
+      sudo systemctl status postgresql
+      # or
+      brew services list | grep postgresql
+
+2. Check database credentials in your `.env` file
+3. Ensure the database exists:
+   
+   .. code-block:: bash
+   
+      psql -h localhost -U postgres -l
+
+**Permission Denied on Log Directory**
+
+.. code-block:: text
+
+   PermissionError: [Errno 13] Permission denied: '/var/log/django-hostname.log'
+
+**Solution:**
+
+Set ``DJANGO_LOGPATH`` to a writable directory:
+
+.. code-block:: bash
+
+   export DJANGO_LOGPATH='/tmp'
+   # or create logs directory in project
+   mkdir -p logs
+   export DJANGO_LOGPATH='./logs'
+
+**Module Import Errors**
+
+.. code-block:: text
+
+   ModuleNotFoundError: No module named 'psycopg2'
+
+**Solutions:**
+
+1. Ensure virtual environment is activated
+2. Install system dependencies (see :ref:`prerequisites`)
+3. Reinstall requirements:
+   
+   .. code-block:: bash
+   
+      pip install --upgrade -r requirements.txt
+
+**Docker Issues**
+
+**Port Already in Use:**
+
+.. code-block:: bash
+
+   # Find and stop conflicting process
+   sudo lsof -i :8000
+   sudo kill <PID>
+
+**Container Build Failures:**
+
+.. code-block:: bash
+
+   # Clean Docker cache and rebuild
+   docker system prune -f
+   docker-compose build --no-cache
+
+Getting Help
+~~~~~~~~~~~~
+
+If you encounter issues not covered here:
+
+1. Check the `GitHub Issues <https://github.com/BNLNPPS/nopayloaddb/issues>`_
+2. Review the Django logs for detailed error messages
+3. Ensure all prerequisites are correctly installed
+4. Try the Docker setup if manual installation fails
+
+**Useful Commands for Debugging:**
+
+.. code-block:: bash
+
+   # Check Python environment
+   python --version
+   pip list
+   
+   # Check PostgreSQL connection
+   psql -h localhost -U your_user -d your_database -c "SELECT 1;"
+   
+   # Check Django configuration
+   python manage.py check
+   
+   # View detailed Django errors
+   python manage.py runserver --verbosity=2
+
+Next Steps
 ----------
 
-For production environments:
+After successful installation:
 
-*   **Do NOT use the Django development server (`runserver`) or `DEBUG = True`.**
-*   Deploy using a production-grade WSGI server (Gunicorn, uWSGI) behind a reverse proxy (Nginx, Apache).
-*   Set `DEBUG = False` in `settings.py`.
-*   Ensure the `SECRET_KEY` environment variable is set securely.
-*   Configure static file serving (`python manage.py collectstatic`).
-*   Manage environment variables securely through your deployment system.
-*   Consult the Django deployment checklist and documentation for your chosen components.
+1. **Explore the API**: Visit http://localhost:8000/api/cdb_rest/
+2. **Read the Usage Guide**: See :doc:`usage` for API examples
+3. **Development**: See :doc:`development` for development guidelines
+4. **Architecture**: Learn about the system in :doc:`architecture`
+
+.. tip::
+   **Quick API Test**: Try this command to verify everything is working:
+   
+   .. code-block:: bash
+   
+      curl -H "Content-Type: application/json" http://localhost:8000/api/cdb_rest/gt

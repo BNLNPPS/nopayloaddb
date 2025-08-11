@@ -1,0 +1,290 @@
+/* Custom CSS for Nopayloaddb Documentation */
+
+/* Improve code block appearance */
+.highlight pre {
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Style for API endpoint documentation */
+.http-method {
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: white;
+    margin-right: 0.5rem;
+}
+
+.http-get { background-color: #28a745; }
+.http-post { background-color: #007bff; }
+.http-put { background-color: #ffc107; color: #212529; }
+.http-delete { background-color: #dc3545; }
+
+/* Enhance admonition styling */
+.admonition {
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.admonition.note {
+    border-left: 4px solid #0066cc;
+    background-color: #f8f9ff;
+}
+
+.admonition.warning {
+    border-left: 4px solid #ff9900;
+    background-color: #fff8f0;
+}
+
+.admonition.tip {
+    border-left: 4px solid #28a745;
+    background-color: #f8fff8;
+}
+
+/* Style for table of contents */
+.toc ul {
+    list-style-type: none;
+    padding-left: 1.5rem;
+}
+
+.toc li {
+    margin: 0.5rem 0;
+}
+
+.toc a {
+    text-decoration: none;
+    color: #333;
+}
+
+.toc a:hover {
+    color: #0066cc;
+    text-decoration: underline;
+}
+
+/* Enhance table styling */
+table.docutils {
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    margin: 1rem 0;
+}
+
+table.docutils th,
+table.docutils td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+table.docutils th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+}
+
+table.docutils tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Style for version badges and status indicators */
+.version-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+    background-color: #6c757d;
+    color: white;
+}
+
+.version-badge.latest {
+    background-color: #28a745;
+}
+
+.version-badge.development {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+/* Enhance sidebar navigation */
+.bd-sidebar {
+    font-size: 0.9rem;
+}
+
+.bd-sidebar .nav-link {
+    padding: 0.5rem 1rem;
+    color: #495057;
+}
+
+.bd-sidebar .nav-link:hover {
+    background-color: #f8f9fa;
+    color: #0066cc;
+}
+
+.bd-sidebar .nav-link.active {
+    background-color: #e3f2fd;
+    color: #0066cc;
+    border-left: 3px solid #0066cc;
+}
+
+/* Custom styling for grid cards */
+.grid-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s ease;
+}
+
+.grid-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.grid-card h3 {
+    margin-top: 0;
+    color: #0066cc;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .highlight pre {
+        font-size: 0.8rem;
+        overflow-x: auto;
+    }
+    
+    table.docutils {
+        font-size: 0.875rem;
+    }
+    
+    table.docutils th,
+    table.docutils td {
+        padding: 0.5rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .bd-sidebar,
+    .navbar,
+    .btn-group {
+        display: none !important;
+    }
+    
+    .bd-main {
+        margin-left: 0 !important;
+    }
+    
+    .highlight pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+}
+
+/* Code copy button styling */
+.copybtn {
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+.highlight:hover .copybtn {
+    opacity: 1;
+}
+
+/* Custom button styling */
+.btn-outline-primary {
+    color: #0066cc;
+    border-color: #0066cc;
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0066cc;
+    border-color: #0066cc;
+}
+
+/* Footer customization */
+.footer {
+    border-top: 1px solid #dee2e6;
+    padding-top: 2rem;
+    margin-top: 3rem;
+}
+
+/* Logo and branding */
+.navbar-brand img {
+    height: 32px;
+    width: auto;
+}
+
+/* Search improvements */
+.search-input {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+}
+
+/* Tabs styling enhancement */
+.sphinx-tabs-tab {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.sphinx-tabs-tab[aria-selected="true"] {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+}
+
+.sphinx-tabs-panel {
+    border: 1px solid #dee2e6;
+    padding: 1rem;
+    background-color: #fff;
+}
+
+/* API documentation enhancements */
+.api-endpoint {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.api-endpoint .method {
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+.api-endpoint .url {
+    font-family: monospace;
+    background-color: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 1rem;
+}
+
+/* Parameter documentation */
+.parameter-list {
+    margin: 1rem 0;
+}
+
+.parameter-list dt {
+    font-weight: 600;
+    font-family: monospace;
+    color: #495057;
+}
+
+.parameter-list dd {
+    margin-left: 2rem;
+    margin-bottom: 0.5rem;
+}
