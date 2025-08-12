@@ -13,8 +13,6 @@ Before using the API, ensure you have the service running. See :ref:`install` fo
 **Service URLs**
 
 - Local development: ``http://localhost:8000``
-- Production: ``http://nopayloaddb-nopayloaddb.apps.sdcc.bnl.gov``
-- Test: ``http://npdb-test-test.apps.sdcc.bnl.gov``
 
 **API Base Path**
 
@@ -79,6 +77,18 @@ The most common operation is querying for payloads based on a Global Tag and IOV
 
    curl http://localhost:8000/api/cdb_rest/globalTag/sPHENIX_ExampleGT_24
 
+
+**Create New Global Tag Status**
+
+.. code-block:: bash
+
+    curl -X POST http://localhost:8000/api/cdb_rest/gtstatus \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Open"
+      }'
+
+
 **Create New Global Tag**
 
 .. code-block:: bash
@@ -89,7 +99,7 @@ The most common operation is querying for payloads based on a Global Tag and IOV
        "name": "MyNewGT",
        "author": "username",
        "description": "New global tag for testing",
-       "status": 1
+       "status": "Open"
      }'
 
 **Clone Global Tag**

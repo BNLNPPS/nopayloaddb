@@ -55,8 +55,6 @@ The fastest way to get Nopayloaddb running:
       docker-compose up --build
 
 4. **Access the Application:**
-   
-   Open your browser to http://localhost:8000
 
    **API Endpoints:**
    - API Documentation: http://localhost:8000/api/cdb_rest/
@@ -370,7 +368,7 @@ Setup Steps
       docker-compose logs webapp
       
       # Test API endpoint
-      curl http://localhost:8000/api/cdb_rest/
+      curl http://localhost:8000/api/cdb_rest/gt
 
 5. **Managing the Development Environment**
 
@@ -637,10 +635,9 @@ Next Steps
 
 After successful installation:
 
-1. **Explore the API**: Visit http://localhost:8000/api/cdb_rest/
-2. **Read the Usage Guide**: See :doc:`usage` for API examples
-3. **Development**: See :doc:`development` for development guidelines
-4. **Architecture**: Learn about the system in :doc:`architecture`
+1. **Read the Usage Guide**: See :doc:`usage` for API examples
+2. **Development**: See :doc:`development` for development guidelines
+3. **Architecture**: Learn about the system in :doc:`architecture`
 
 .. tip::
    **Quick API Test**: Try this command to verify everything is working:
