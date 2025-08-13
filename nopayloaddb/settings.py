@@ -149,6 +149,7 @@ DATABASES = {
         'PORT':     os.environ.get("POSTGRES_PORT_W",     default='5432'),
 
         'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
     'read_db_1': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -161,6 +162,7 @@ DATABASES = {
         'PORT':     os.environ.get("POSTGRES_PORT_R1",     default='5432'),
 
         'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
     'read_db_2': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -173,6 +175,7 @@ DATABASES = {
         'PORT':     os.environ.get("POSTGRES_PORT_R2",     default='5432'),
 
         'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
 }
 
