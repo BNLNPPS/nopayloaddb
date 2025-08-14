@@ -106,18 +106,9 @@ if os.environ.get("DJANGO_LOGGING") == "file":
         },
     }
 
-if os.environ.get("DJANGO_LOGGING") == "console":
-    #LOGGING['handlers']['file']['class'] = 'logging.StreamHandler'
-    #LOGGING['handlers']['file']['stream'] = 'ext://sys.stdout'
-    LOGGING['loggers']['django']['handlers'] = ['console']
-    LOGGING['loggers']['django']['level'] = 'INFO'
-    LOGGING['loggers']['django']['propagate'] = False
-
-
-if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
-    LOGGING['loggers']['django']['handlers'] = ['console']
-    LOGGING['loggers']['django']['level'] = 'INFO'
-    LOGGING['loggers']['django']['propagate'] = False
+LOGGING['loggers']['django']['handlers'] = ['console']
+LOGGING['loggers']['django']['level'] = 'INFO'
+LOGGING['loggers']['django']['propagate'] = False
 
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
