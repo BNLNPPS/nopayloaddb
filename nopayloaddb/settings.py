@@ -106,10 +106,10 @@ if os.environ.get("DJANGO_LOGGING") == "file":
         },
     }
 
+
 LOGGING['loggers']['django']['handlers'] = ['console']
 LOGGING['loggers']['django']['level'] = 'INFO'
 LOGGING['loggers']['django']['propagate'] = False
-
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
