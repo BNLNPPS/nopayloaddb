@@ -9,3 +9,4 @@ db/
 **/migrations/*.py
 !**/migrations/__init__.py
 **/migrations/*.pyc
+cdb_rest/migrations/__init__.py

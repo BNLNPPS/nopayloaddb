@@ -76,34 +76,44 @@ TEMPLATES = [
 ]
 import socket
 
-try:
-    HOSTNAME = socket.gethostname()
-except:
-    HOSTNAME = 'localhost'
+if os.environ.get("DJANGO_LOGGING") == "file":
+    try:
+        HOSTNAME = socket.gethostname()
+    except:
+        HOSTNAME = 'localhost'
 
-LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
+    LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
+            },
+            'console': {
+                'class': 'logging.StreamHandler',
+            }
         },
-        'console': {
-            'class': 'logging.StreamHandler',
-        }
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
+        'loggers': {
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': True,
+            },
         },
-    },
-}
+    }
+
+if os.environ.get("DJANGO_LOGGING") == "console":
+    #LOGGING['handlers']['file']['class'] = 'logging.StreamHandler'
+    #LOGGING['handlers']['file']['stream'] = 'ext://sys.stdout'
+    LOGGING['loggers']['django']['handlers'] = ['console']
+    LOGGING['loggers']['django']['level'] = 'INFO'
+    LOGGING['loggers']['django']['propagate'] = False
+
+
 if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
     LOGGING['loggers']['django']['handlers'] = ['console']
     LOGGING['loggers']['django']['level'] = 'INFO'
