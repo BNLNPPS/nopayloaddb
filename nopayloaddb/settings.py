@@ -107,9 +107,24 @@ if os.environ.get("DJANGO_LOGGING") == "file":
     }
 
 
-LOGGING['loggers']['django']['handlers'] = ['console']
-LOGGING['loggers']['django']['level'] = 'INFO'
-LOGGING['loggers']['django']['propagate'] = False
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
 
