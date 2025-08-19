@@ -196,9 +196,9 @@ REST_FRAMEWORK = {
 #    'DEFAULT_AUTHENTICATION_CLASSES': (
 #        'rest_framework.authentication.TokenAuthentication',
 #    ),
-    #'DEFAULT_AUTHENTICATION_CLASSES': (
-    #    'cdb_rest.authentication.CustomJWTAuthentication',
-    #),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'cdb_rest.authentication.CustomJWTAuthentication',
+    ),
     #'DEFAULT_PERMISSION_CLASSES': (
     #    'rest_framework.permissions.IsAuthenticated',
     #),
@@ -206,7 +206,7 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
-PERMISSION_PLUGIN_CLASS = "myapp.permission_plugins.belle2.DummyPermissionPlugin"
+PERMISSION_PLUGIN_CLASS = "cdb_rest.permissions_plugins.belle2.Belle2PermissionPlugin"
 
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
@@ -226,15 +226,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-SIMPLE_JWT = {
-    #'SIGNING_KEY': settings.SECRET_KEY,
-    #ZZ'VERIFYING_KEY':SECRET_KEY,
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
-    'USER_ID_CLAIM': 'user_id',
+#SIMPLE_JWT = {
+    #'SIGNING_KEY': SECRET_KEY,
+    #'VERIFYING_KEY':SECRET_KEY,
+#    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+#    'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
+    #'USER_ID_CLAIM': 'user_id',
 
     #'JTI_CLAIM': 'jti',
-}
+#}
 
 
 

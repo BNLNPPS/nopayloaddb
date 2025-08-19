@@ -18,11 +18,11 @@ class CustomJWTAuthentication(BaseAuthentication):
             bearer, access_token = authorization_header.split(' ')
             if bearer != 'Bearer':
                 raise exceptions.AuthenticationFailed('Wrong access_token format')
-
+           
             payload = jwt.decode(
                 access_token,
-                settings.SECRET_KEY,
-                algorithms=['HS256']
+                settings.SECRET_KEY.encode("utf-8"),
+                algorithms=["HS256"]
             )
 
         except jwt.ExpiredSignatureError:
