@@ -63,8 +63,20 @@ class TimeoutListAPIView(ListAPIView):
 
 
 class GlobalTagListCreationAPIView(ListCreateAPIView):
-    # authentication_classes = [CustomJWTAuthentication]
-    # permission_classes = (IsAuthenticated)
+    #authentication_classes = [CustomJWTAuthentication]
+    #permission_classes = (IsAuthenticated)
+
+    
+   
+#    context = {"target_object": target_object}
+#
+#    if plugin.has_permission(request, context, auth_context):
+#        # proceed with the write
+#        return Response({"status": "success"}, status=status.HTTP_200_OK)
+#    else:
+#        return Response({"status": "forbidden"}, status=status.HTTP_403_FORBIDDEN
+
+
     serializer_class = GlobalTagCreateSerializer
 
     def get_queryset(self):
@@ -77,7 +89,13 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
+
         data = request.data
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "name": data['name']}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             gt_status = GlobalTagStatus.objects.get(name=data['status'])
             data['status'] = gt_status.pk
