@@ -70,16 +70,6 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
     #authentication_classes = [CustomJWTAuthentication]
     #permission_classes = (IsAuthenticated)
 
-    
-   
-#    context = {"target_object": target_object}
-#
-#    if plugin.has_permission(request, context, auth_context):
-#        # proceed with the write
-#        return Response({"status": "success"}, status=status.HTTP_200_OK)
-#    else:
-#        return Response({"status": "forbidden"}, status=status.HTTP_403_FORBIDDEN
-
 
     serializer_class = GlobalTagCreateSerializer
 
@@ -96,7 +86,7 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
         data = request.data
         plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "name": data['name']}
+        target_object = {"object": "GlobalTag", "role": "admin", "name": data['name']}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         
@@ -137,6 +127,12 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             return None
 
     def destroy(self, request, *args, **kwargs):
+
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs['globalTagName']}   
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
         gt = self.get_gtag()
         if not gt:
             return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -174,6 +170,12 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
             return None
 
     def destroy(self, request, *args, **kwargs):
+
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs['globalTagName']}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
         piov = self.get_object()
         if not piov:
             return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -419,6 +421,11 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
 
         data = request.data
 
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "createpayload", "name": self.kwargs['payload_url']}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
         if 'major_iov_end' not in data:
             data['major_iov_end'] = sys.maxsize
         if 'minor_iov_end' not in data:
@@ -523,6 +530,12 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
     @transaction.atomic
     def create(self, request, globalTagName, cloneName):
+
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "admin", "name": self.get_clone_name()}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
         global_tag = self.get_global_tag()
         payload_lists = self.get_payload_lists(global_tag)
 
@@ -706,6 +719,12 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         data = request.data
 
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "admin", "name": data['global_tag']}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
+
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
         except KeyError:
@@ -779,6 +798,12 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         offset = iov_config['next_iov_offset']
 
         data = request.data
+
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
@@ -965,6 +990,13 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
 
     # @transaction.atomic
     def put(self, request, *args, **kwargs):
+
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs.get('globalTagName')}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
+
         try:
             gt = self.get_global_tag()
         except KeyError:
