@@ -1,0 +1,41 @@
+FROM cern/cs9-base:latest
+MAINTAINER Ruslan Mashinistov "mashinistov@bnl.gov"
+
+#install pip3
+RUN yum install -y python3-pip
+RUN yum install -y git
+RUN yum install -y python3-psycopg2
+RUN yum install -y postgresql-devel
+RUN yum install -y python3-devel gcc
+RUN yum install -y postgresql lsof
+#Workdir
+RUN git clone --depth 1 --branch 0.4 https://github.com/BNLNPPS/nopayloaddb /nopayloaddb
+
+COPY requirements.txt /nopayloaddb/requirements.txt
+RUN pip3 install -r /nopayloaddb/requirements.txt
+
+RUN pip3 install gunicorn
+RUN pip3 install pytz
+
+RUN yum install -y sudo vim
+
+
+RUN useradd docker
+RUN echo "docker ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/docker
+RUN chmod 0440 /etc/sudoers.d/docker
+RUN usermod -aG wheel docker
+RUN chown -R docker:docker /nopayloaddb
+RUN chown -R docker:docker /var/log
+
+USER docker
+
+WORKDIR /nopayloaddb
+CMD gunicorn \
+  --graceful-timeout 1800 \
+  --timeout 1800 \
+  --workers 1 \
+  --threads 4 \
+  --log-file /var/log/gunicorn.log \
+  nopayloaddb.wsgi:application \
+  --bind 0.0.0.0:8000
+
