@@ -76,38 +76,54 @@ TEMPLATES = [
 ]
 import socket
 
-try:
-    HOSTNAME = socket.gethostname()
-except:
-    HOSTNAME = 'localhost'
+if os.environ.get("DJANGO_LOGGING") == "file":
+    try:
+        HOSTNAME = socket.gethostname()
+    except:
+        HOSTNAME = 'localhost'
 
-LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
+    LOGPATH = os.environ.get("DJANGO_LOGPATH", default='/var/log')
+
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
+            },
+            'console': {
+                'class': 'logging.StreamHandler',
+            }
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+        },
+    }
+
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '{}/django-{}.log'.format(LOGPATH, HOSTNAME),
-        },
         'console': {
             'class': 'logging.StreamHandler',
-        }
+            'level': 'DEBUG',
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }
-if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
-    LOGGING['loggers']['django']['handlers'] = ['console']
-    LOGGING['loggers']['django']['level'] = 'INFO'
-    LOGGING['loggers']['django']['propagate'] = False
 
 
 WSGI_APPLICATION = 'nopayloaddb.wsgi.application'
@@ -148,7 +164,8 @@ DATABASES = {
         'HOST':     os.environ.get("POSTGRES_HOST_W",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_W",     default='5432'),
 
-        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
+        'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
     'read_db_1': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -160,7 +177,8 @@ DATABASES = {
         'HOST':     os.environ.get("POSTGRES_HOST_R1",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_R1",     default='5432'),
 
-        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
+        'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
     'read_db_2': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -172,7 +190,8 @@ DATABASES = {
         'HOST':     os.environ.get("POSTGRES_HOST_R2",     default='localhost'),
         'PORT':     os.environ.get("POSTGRES_PORT_R2",     default='5432'),
 
-        'CONN_MAX_AGE': 60,  # Close and reopen every 1m
+        'CONN_MAX_AGE': 10,  # Close and reopen every 10s
+
     },
 }
 
