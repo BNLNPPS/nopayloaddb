@@ -6,6 +6,9 @@ Nopayloaddb Documentation
 
 **Nopayloaddb** is a reference implementation of a **Conditions Database (CDB)** for High Energy Physics (HEP) experiments, developed by the HEP Software Foundation (HSF). It provides a robust, scalable RESTful API for managing time-dependent calibration and configuration data.
 
+.. warning::
+   This documentation is under development. Some sections may be incomplete or not working as expected. Please report any issues on GitHub.
+
 .. note::
    **Quick Start**: Ready to get started? Jump to our :doc:`installation` guide for Docker setup in under 5 minutes!
 

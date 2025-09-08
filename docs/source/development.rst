@@ -95,6 +95,540 @@ For a more consistent development environment:
    # Start services
    docker-compose up --build
 
+Local Kubernetes Development Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This section covers local development using either **Minikube** (standard Kubernetes) or **OpenShift Local** (formerly CodeReady Containers). Choose the approach that matches your preferred platform.
+
+**Prerequisites**
+
+Choose one of the following setups:
+
+**For Minikube (Standard Kubernetes):**
+
+- Docker (for Minikube driver)
+- Minikube installed
+- kubectl installed
+- Helm 3.x installed
+
+**For OpenShift Local:**
+
+- OpenShift Local (CRC) installed
+- oc CLI tool installed  
+- Helm 3.x installed
+
+**1. Setup Local Kubernetes Environment**
+
+**Option 1: Minikube Setup**
+
+.. code-block:: bash
+
+   # Start Minikube with Docker driver
+   minikube start --driver=docker --cpus=4 --memory=8192
+
+   # Enable required addons
+   minikube addons enable ingress
+   minikube addons enable dashboard
+   minikube addons enable metrics-server
+
+   # Verify cluster is running
+   kubectl get nodes
+
+   # Confirm the addons are enabled
+   kubectl get namespaces
+   kubectl get pods -n ingress-nginx
+
+   # You can monitor the cluster using the dashboard:
+   minikube dashboard --url
+
+**Option 2: OpenShift Local Setup**
+
+.. code-block:: bash
+
+   # Start OpenShift Local (adjust memory/cpus as needed)
+   crc start
+
+   # Setup oc command line tool
+   eval $(crc oc-env)
+
+   # Login as developer (default credentials)
+   oc login -u developer -p developer https://api.crc.testing:6443
+
+   # Verify cluster is running
+   oc get nodes
+
+   # Check cluster status
+   crc status
+
+   # Access OpenShift console (optional)
+   crc console --url
+
+
+**2. Clone and Prepare Helm Charts**
+
+.. code-block:: bash
+
+   # Clone the charts repository (if not already done)
+   git clone https://github.com/BNLNPPS/nopayloaddb-charts.git
+   cd nopayloaddb-charts
+
+**Important Note**: The original Helm charts are designed for OpenShift and use OpenShift-specific resources (``ImageStream`` and ``Route``). For **Minikube** users, these need to be modified. For **OpenShift Local** users, the original charts can be used as-is.
+
+**2a. For Minikube Users: Create Kubernetes-Compatible Charts**
+
+If using Minikube, modify the charts to work with standard Kubernetes:
+
+.. code-block:: bash
+
+   # Create a backup and modify the templates for Kubernetes compatibility
+   cp -r nopayloaddb nopayloaddb-k8s
+   cd nopayloaddb-k8s
+
+   # Remove ImageStream from django.yaml (lines 1-15)
+   sed -i '1,15d' templates/django.yaml
+
+   # Remove ImageStream from pgbouncer.yaml (lines 1-15) 
+   sed -i '1,15d' templates/pgbouncer.yaml
+
+   # Remove OpenShift Route from nginx.yaml and replace with Kubernetes Ingress
+   # First remove the Route section (lines 111-124)
+   sed -i '111,124d' templates/nginx.yaml
+
+   # Create Kubernetes Ingress for nginx
+   cat >> templates/nginx.yaml << 'EOF'
+   ---
+   apiVersion: networking.k8s.io/v1
+   kind: Ingress
+   metadata:
+     name: nginx-ingress
+     labels:
+       app: nginx
+     annotations:
+       nginx.ingress.kubernetes.io/rewrite-target: /
+   spec:
+     rules:
+     - host: {{ .Values.appname }}.{{ .Values.domain }}
+       http:
+         paths:
+         - path: /
+           pathType: Prefix
+           backend:
+             service:
+               name: nginx
+               port:
+                 number: 8080
+   EOF
+
+**2b. Create Custom Values Files**
+
+Create the appropriate values file for your platform:
+
+**For Minikube:**
+
+.. code-block:: bash
+
+   # Create custom values file for Minikube
+   cat > nopayloaddb-k8s/values-minikube.yaml << EOF
+   # Local Minikube configuration
+   domain: minikube.local
+   project: nopayloaddb-dev
+   appname: nopayloaddb-dev
+   
+   # Database parameters (using local PostgreSQL)
+   dbhost: postgresql
+   dbname: nopayloaddb
+   dbuser: npdb
+   dbpassword: dev_password
+   
+   # Log paths
+   django_logpath: /tmp/logs
+   nginx_logpath: /tmp/logs
+   pgbouncer_logpath: /tmp/logs
+   
+   # Persistent Volume Claims
+   pvcname: nopayloaddb-pvc
+   
+   # Docker images (using public registry)
+   # Note: ghcr.io/plexoos/npdb only supports x86_64/amd64 architecture
+   # For ARM64 (Apple Silicon), see troubleshooting section for alternatives
+   django_docker_image: ghcr.io/plexoos/npdb
+   pgbouncer_docker_image: pgbouncer/pgbouncer
+   django_docker_image_tag: latest
+   pgbouncer_docker_image_tag: latest
+   EOF
+
+**For OpenShift Local:**
+
+.. code-block:: bash
+
+   # Create custom values file for OpenShift Local
+   cat > nopayloaddb/values-openshift-local.yaml << EOF
+   # OpenShift Local configuration
+   domain: apps-crc.testing
+   project: nopayloaddb-dev
+   appname: nopayloaddb-dev
+   
+   # Database parameters (using local PostgreSQL)
+   dbhost: postgresql
+   dbname: nopayloaddb
+   dbuser: npdb
+   dbpassword: dev_password
+   
+   # Log paths
+   django_logpath: /tmp/logs
+   nginx_logpath: /tmp/logs
+   pgbouncer_logpath: /tmp/logs
+   
+   # Persistent Volume Claims
+   pvcname: nopayloaddb-pvc
+   
+   # Docker images (using public registry)
+   # Note: ghcr.io/plexoos/npdb only supports x86_64/amd64 architecture
+   # For ARM64 (Apple Silicon), see troubleshooting section for alternatives
+   django_docker_image: ghcr.io/plexoos/npdb
+   pgbouncer_docker_image: pgbouncer/pgbouncer
+   django_docker_image_tag: latest
+   pgbouncer_docker_image_tag: latest
+   EOF
+
+**3. Deploy PostgreSQL Database**
+
+The database deployment is the same for both platforms:
+
+.. code-block:: bash
+
+   # Create namespace (use oc for OpenShift Local, kubectl for Minikube)
+   # For Minikube:
+   kubectl create namespace nopayloaddb-dev
+   
+   # For OpenShift Local:
+   # oc new-project nopayloaddb-dev
+
+   # Add Bitnami Helm repository for PostgreSQL
+   helm repo add bitnami https://charts.bitnami.com/bitnami
+   helm repo update
+
+   # Deploy PostgreSQL (same command for both platforms)
+   helm install postgresql bitnami/postgresql \
+     --namespace nopayloaddb-dev \
+     --set auth.postgresPassword=admin_password \
+     --set auth.username=npdb \
+     --set auth.password=dev_password \
+     --set auth.database=nopayloaddb \
+     --set persistence.enabled=true \
+     --set persistence.size=10Gi
+
+   # Wait for PostgreSQL to be ready (use kubectl for both platforms)
+   kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n nopayloaddb-dev --timeout=300s
+
+**4. Create Persistent Volume for Application**
+
+.. code-block:: bash
+
+   # Create PersistentVolumeClaim for application logs
+   cat > nopayloaddb-pvc.yaml << EOF
+   apiVersion: v1
+   kind: PersistentVolumeClaim
+   metadata:
+     name: nopayloaddb-pvc
+     namespace: nopayloaddb-dev
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+         storage: 5Gi
+   EOF
+
+   kubectl apply -f nopayloaddb-pvc.yaml
+
+**5. Deploy NoPayloadDB Application**
+
+Choose the deployment method based on your platform:
+
+**For Minikube:**
+
+.. code-block:: bash
+
+   # Install the application using the modified Kubernetes-compatible Helm chart
+   helm install nopayloaddb ./nopayloaddb-k8s \
+     --namespace nopayloaddb-dev \
+     --values nopayloaddb-k8s/values-minikube.yaml
+
+   # Wait for deployment to be ready
+   kubectl wait --for=condition=available deployment/django -n nopayloaddb-dev --timeout=300s
+
+   # Check pod status
+   kubectl get pods -n nopayloaddb-dev
+
+**For OpenShift Local:**
+
+.. code-block:: bash
+
+   # Install the application using the original OpenShift Helm chart
+   helm install nopayloaddb ./nopayloaddb \
+     --namespace nopayloaddb-dev \
+     --values nopayloaddb/values-openshift-local.yaml
+
+   # Wait for deployment to be ready
+   kubectl wait --for=condition=available deployment/django -n nopayloaddb-dev --timeout=300s
+
+   # Check pod status (you can use either oc or kubectl)
+   oc get pods -n nopayloaddb-dev
+   # or
+   kubectl get pods -n nopayloaddb-dev
+
+**6. Access the Application**
+
+**For Minikube:**
+
+.. code-block:: bash
+
+   # Option 1: Port forward to access the application locally
+   kubectl port-forward service/nginx 8080:8080 -n nopayloaddb-dev
+
+   # Access the application at http://localhost:8080
+
+   # Option 2: Use Minikube service (alternative method)
+   minikube service nginx -n nopayloaddb-dev --url
+
+   # Option 3: Use Ingress (if properly configured)
+   # First get Minikube IP
+   minikube ip
+   # Then add to /etc/hosts: <minikube-ip> nopayloaddb-dev.minikube.local
+   # Access via: http://nopayloaddb-dev.minikube.local
+
+**For OpenShift Local:**
+
+.. code-block:: bash
+
+   # Option 1: Port forward to access the application locally
+   oc port-forward service/nginx 8080:8080 -n nopayloaddb-dev
+
+   # Access the application at http://localhost:8080
+
+   # Option 2: Use OpenShift Route (automatically created)
+   oc get routes -n nopayloaddb-dev
+   # Access the application using the URL from the route
+
+   # Option 3: Access via OpenShift console
+   crc console
+   # Navigate to the nopayloaddb-dev project to see the application
+
+**7. Initialize Database Schema**
+
+.. code-block:: bash
+
+   # Run Django migrations
+   kubectl exec -it deployment/django -n nopayloaddb-dev -- python manage.py migrate
+
+   # Create Django superuser
+   kubectl exec -it deployment/django -n nopayloaddb-dev -- python manage.py createsuperuser
+
+   # Load initial data (if available)
+   kubectl exec -it deployment/django -n nopayloaddb-dev -- python manage.py loaddata initial_data.json
+
+**Development Workflow**
+
+.. code-block:: bash
+
+   # Check application logs
+   kubectl logs -f deployment/django -n nopayloaddb-dev
+
+   # Check PostgreSQL logs
+   kubectl logs -f statefulset/postgresql -n nopayloaddb-dev
+
+   # Access Django shell
+   kubectl exec -it deployment/django -n nopayloaddb-dev -- python manage.py shell
+
+   # Restart deployment after changes
+   kubectl rollout restart deployment/django -n nopayloaddb-dev
+
+   # Update application with Helm (choose based on your platform)
+   
+   # For Minikube:
+   helm upgrade nopayloaddb ./nopayloaddb-k8s \
+     --namespace nopayloaddb-dev \
+     --values nopayloaddb-k8s/values-minikube.yaml
+   
+   # For OpenShift Local:
+   helm upgrade nopayloaddb ./nopayloaddb \
+     --namespace nopayloaddb-dev \
+     --values nopayloaddb/values-openshift-local.yaml
+
+**Cleanup**
+
+**For Minikube:**
+
+.. code-block:: bash
+
+   # Remove the application
+   helm uninstall nopayloaddb -n nopayloaddb-dev
+   helm uninstall postgresql -n nopayloaddb-dev
+
+   # Delete namespace
+   kubectl delete namespace nopayloaddb-dev
+
+   # Stop Minikube
+   minikube stop
+
+   # Delete Minikube cluster (optional - removes everything)
+   minikube delete
+
+**For OpenShift Local:**
+
+.. code-block:: bash
+
+   # Remove the application
+   helm uninstall nopayloaddb -n nopayloaddb-dev
+   helm uninstall postgresql -n nopayloaddb-dev
+
+   # Delete project (namespace)
+   oc delete project nopayloaddb-dev
+
+   # Stop OpenShift Local
+   crc stop
+
+   # Delete OpenShift Local cluster (optional - removes everything)
+   crc delete
+
+**Troubleshooting**
+
+**Platform-Specific Issues:**
+
+- **Minikube - ImageStream/Route errors**: If you get errors about ``ImageStream`` or ``Route`` resources not found, you're trying to use the original OpenShift charts on standard Kubernetes. Follow the chart modification steps in section 2a above.
+
+- **OpenShift Local - Standard Kubernetes resources not working**: If you're trying to use Kubernetes Ingress or other standard K8s resources on OpenShift Local, use the original OpenShift charts with Routes instead.
+
+**Common Issues (Both Platforms):**
+
+- **ImagePullBackOff on ARM64/Apple Silicon**: The default image ``ghcr.io/plexoos/npdb`` only supports x86_64/amd64 architecture. For ARM64 systems (Apple Silicon Macs), you have several options:
+
+  **Option 1: Force x86_64 emulation in OpenShift Local**
+  
+  .. code-block:: bash
+  
+     # Stop current CRC instance
+     crc stop
+     crc delete
+     
+     # Start CRC with specific architecture emulation
+     crc start --cpus 4 --memory 8192
+     
+     # The image should work with emulation, though performance may be slower
+
+  **Option 2: Build your own ARM64 image**
+  
+  .. code-block:: bash
+  
+     # Clone the nopayloaddb repository
+     git clone https://github.com/BNLNPPS/nopayloaddb.git
+     cd nopayloaddb
+     
+     # Build for ARM64
+     docker build --platform linux/arm64 -t nopayloaddb:arm64-local .
+     
+     # For OpenShift Local, import to the internal registry
+     oc import-image nopayloaddb:arm64-local --from=nopayloaddb:arm64-local --confirm
+     
+     # Update values file to use your local image
+     django_docker_image: image-registry.openshift-image-registry.svc:5000/nopayloaddb-dev/nopayloaddb
+     django_docker_image_tag: arm64-local
+
+  **Option 3: Use alternative deployment method**
+  
+  .. code-block:: bash
+  
+     # Deploy using standard Django/Python image and mount source code
+     # This requires creating custom Kubernetes manifests instead of using Helm charts
+
+- **Pod not starting**: Check ``kubectl describe pod <pod-name> -n nopayloaddb-dev``
+
+- **Database connection issues**: Verify PostgreSQL is running and credentials are correct:
+  
+  .. code-block:: bash
+  
+     kubectl get pods -l app.kubernetes.io/name=postgresql -n nopayloaddb-dev
+     kubectl logs -l app.kubernetes.io/name=postgresql -n nopayloaddb-dev
+
+- **Image pull errors**: Ensure Minikube has access to the container registry:
+  
+  .. code-block:: bash
+  
+     # Check if images are being pulled
+     kubectl describe pod <pod-name> -n nopayloaddb-dev
+     
+     # For private registries, you may need to configure image pull secrets
+
+- **Storage issues**: Check PVC status with ``kubectl get pvc -n nopayloaddb-dev``
+
+- **Nginx service not accessible**: Verify the service and port configuration:
+  
+  .. code-block:: bash
+  
+     kubectl get svc nginx -n nopayloaddb-dev
+     kubectl get endpoints nginx -n nopayloaddb-dev
+
+**Common OpenShift vs Kubernetes Issues**
+
+The original Helm charts were designed for OpenShift and include resources that don't exist in standard Kubernetes:
+
+- ``ImageStream`` (OpenShift) → Use standard Docker images directly in Kubernetes
+- ``Route`` (OpenShift) → Replace with ``Ingress`` for Kubernetes  
+- Different security contexts and user permissions
+
+**Alternative: Direct Kubernetes Deployment (Without Helm Charts)**
+
+If you prefer not to modify the Helm charts, you can deploy directly using standard Kubernetes manifests:
+
+.. code-block:: bash
+
+   # This approach bypasses the OpenShift-specific Helm charts entirely
+   # and uses standard Kubernetes YAML files instead
+   
+   # Deploy PostgreSQL using Bitnami Helm chart (as shown in step 3)
+   # Then create simple Kubernetes deployments for the Django app
+   
+   # Example Django deployment (create your own k8s manifests)
+   kubectl create deployment django \
+     --image=ghcr.io/plexoos/npdb:latest \
+     --namespace=nopayloaddb-dev
+   
+   kubectl expose deployment django \
+     --port=8000 \
+     --namespace=nopayloaddb-dev
+   
+   # This method requires more manual configuration but avoids
+   # OpenShift compatibility issues
+
+**Accessing Platform Dashboards**
+
+**For Minikube:**
+
+.. code-block:: bash
+
+   # Start the Kubernetes dashboard
+   minikube dashboard
+
+   # Or access via kubectl proxy
+   kubectl proxy
+   # Then visit: http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+**For OpenShift Local:**
+
+.. code-block:: bash
+
+   # Access OpenShift web console
+   crc console
+
+   # Or get the console URL
+   crc console --url
+
+   # Login with developer/developer or kubeadmin credentials
+   # Developer user: developer / developer
+   # Admin user credentials: 
+   crc console --credentials
+
 Code Structure
 --------------
 
