@@ -35,23 +35,20 @@ Nopayloaddb serves as a **conditions database service** designed to handle the c
 Key Features
 ============
 
-✨ **Enterprise Ready**
+✨ **Ready to Adopt**
    - Docker containerization for easy deployment
    - PostgreSQL backend with connection pooling
    - Kubernetes and OpenShift deployment templates
-   - Production-grade WSGI server support
 
 🛡️ **Security & Performance**
-   - JWT and token-based authentication (configurable)
-   - Database query optimization with custom SQL
+   - JWT and token-based authentication
    - Bulk operations for efficient data loading
-   - Comprehensive logging and monitoring
+   - Comprehensive logging and monitoring (in development)
 
 🔧 **Developer Friendly**
-   - Comprehensive test suite with coverage reporting
    - Django ORM with custom database routing
    - RESTful API built with Django REST Framework
-   - Extensive documentation and examples
+   - Documentation and examples
 
 Core Concepts
 =============
@@ -76,17 +73,28 @@ Understanding these key concepts will help you work effectively with Nopayloaddb
 Architecture Overview
 =====================
 
-.. code-block:: text
+.. mermaid::
 
-   ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-   │   Client App    │───▶│   REST API       │───▶│   PostgreSQL    │
-   │                 │    │   (Django)       │    │   Database      │
-   └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                   │
-                          ┌──────────────────┐
-                          │   Payload Files  │
-                          │   (External)     │
-                          └──────────────────┘
+   graph TD
+       A["Client App<br/><small>Web/CLI Applications</small>"] 
+       B["REST API<br/><small>Django Framework</small>"]
+       C["PostgreSQL Database<br/><small>Metadata Storage</small>"]
+       D["Payload Files<br/><small>External Storage</small>"]
+       
+       A <--> B
+       B <--> C
+       B <--> D
+       
+       classDef client fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+       classDef api fill:#1565c0,stroke:#0d47a1,stroke-width:3px,color:#fff
+       classDef database fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+       classDef storage fill:#f1f8e9,stroke:#388e3c,stroke-width:2px
+       
+       class A client
+       class B api
+       class C database
+       class D storage
+
 
 The system follows a **metadata-only** approach where the database stores references to payload files rather than the files themselves, enabling efficient storage and retrieval of large datasets.
 
