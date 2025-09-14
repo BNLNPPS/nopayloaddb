@@ -17,35 +17,32 @@ What is Nopayloaddb?
 
 Nopayloaddb serves as a **conditions database service** designed to handle the complex requirements of HEP experiments:
 
-🔧 **Payload Management**
+**Payload Management**
    Store and retrieve time-dependent calibration data, alignment parameters, and configuration settings
 
-📊 **Version Control**
+**Version Control**
    Manage different versions of conditions data with proper validity intervals (IOVs)
 
-🏷️ **Global Tags**  
+**Global Tags**  
    Organize consistent sets of conditions for specific processing campaigns or data-taking periods
 
-🔄 **Read/Write Splitting**
-   Scalable architecture with support for read replicas and database load balancing
-
-🌐 **RESTful API**
+**RESTful API**
    Clean, well-documented HTTP API for easy integration with experiment frameworks
 
 Key Features
 ============
 
-✨ **Ready to Adopt**
+**Ready to Adopt**
    - Docker containerization for easy deployment
    - PostgreSQL backend with connection pooling
    - Kubernetes and OpenShift deployment templates
 
-🛡️ **Security & Performance**
+**Security & Performance**
    - JWT and token-based authentication
    - Bulk operations for efficient data loading
    - Comprehensive logging and monitoring (in development)
 
-🔧 **Developer Friendly**
+**Developer Friendly**
    - Django ORM with custom database routing
    - RESTful API built with Django REST Framework
    - Documentation and examples
@@ -59,7 +56,7 @@ Understanding these key concepts will help you work effectively with Nopayloaddb
    The actual conditions data (e.g., calibration constants, alignment parameters) stored as references to external files or binary data.
 
 **Payload Types**
-   Categories that define the structure or type of payload data (e.g., 'BeamSpot', 'SiPixelQuality', 'CEMC_Thresh').
+   Categories that define the structure or type of payload data (e.g., 'BeamSpot', 'SiPixelQuality').
 
 **Interval of Validity (IOV)**
    The time range, run number range, or other validity dimension for which a specific payload is valid.
@@ -106,7 +103,7 @@ Choose your preferred installation method:
 .. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: 🚀 Quick Start
+   .. grid-item-card:: Quick Start
       :link: installation
       :link-type: doc
 
@@ -115,7 +112,7 @@ Choose your preferred installation method:
       **Time:** 5 minutes  
       **Requirements:** Docker
 
-   .. grid-item-card:: ⚙️ Manual Installation
+   .. grid-item-card:: Manual Installation
       :link: installation
       :link-type: doc
 
@@ -124,7 +121,7 @@ Choose your preferred installation method:
       **Time:** 15-30 minutes  
       **Requirements:** Python, PostgreSQL
 
-   .. grid-item-card:: 🏭 Production Deploy
+   .. grid-item-card:: Production Deploy
       :link: deployment
       :link-type: doc
 
@@ -134,7 +131,7 @@ Choose your preferred installation method:
       **Requirements:** Container orchestration  
       **Helm Charts:** `nopayloaddb-charts <https://github.com/BNLNPPS/nopayloaddb-charts>`_
 
-   .. grid-item-card:: 🔧 Development Setup
+   .. grid-item-card:: Development Setup
       :link: development
       :link-type: doc
 
@@ -229,44 +226,25 @@ Community & Support
 
 **Getting Help**
 
-- 📖 **Documentation**: You're reading it! Check out the specific guides for detailed information
-- 🐛 **Issues**: Report bugs or request features on `GitHub Issues <https://github.com/BNLNPPS/nopayloaddb/issues>`_
-- 💬 **Discussions**: Join the conversation in the HEP Software Foundation forums
+- **Documentation**: Check out the specific guides for detailed information
+- **Issues**: Report bugs or request features on `GitHub Issues <https://github.com/BNLNPPS/nopayloaddb/issues>`_
+- **Discussions**: Join the conversation in the `HEP Software Foundation activites <https://hepsoftwarefoundation.org>`_
 
 **Contributing**
 
 Nopayloaddb is an open-source project welcoming contributions:
 
-- 🔧 **Code**: Submit pull requests for bug fixes or new features
-- 📚 **Documentation**: Help improve these docs
-- 🧪 **Testing**: Report bugs or help with testing
-- 💡 **Ideas**: Suggest new features or improvements
+- **Code**: Submit pull requests for bug fixes or new features
+- **Documentation**: Help improve these docs
+- **Testing**: Report bugs or help with testing
+- **Ideas**: Suggest new features or improvements
 
-See our :doc:`development` guide for details on contributing.
+See our :doc:`development` guide for details.
 
 **License**
 
-Nopayloaddb is released under an open-source license. See the project repository for details.
+See the `LICENSE <https://github.com/BNLNPPS/nopayloaddb/blob/master/LICENSE>`_.
 
-Project Status
-==============
-
-.. list-table::
-   :widths: 20 80
-   :header-rows: 0
-
-   * - **Version**
-     - 0.3 (Active Development)
-   * - **Status**
-     - Production Ready
-   * - **Python**
-     - 3.8+ (3.9+ recommended)
-   * - **Django**
-     - 4.x
-   * - **Database**
-     - PostgreSQL 12+ (13+ recommended)
-   * - **Last Updated**
-     - 2025
 
 Acknowledgments
 ===============
@@ -275,7 +253,3 @@ Nopayloaddb is developed and maintained by the `HEP Software Foundation <https:/
 
 Special thanks to all contributors who have helped shape this project into a robust solution for conditions database management in HEP experiments.
 
----
-
-.. note::
-   **Next Steps**: Ready to start? Head over to the :doc:`installation` guide to get Nopayloaddb running, or check out the :doc:`usage` examples to see what you can do with it!
