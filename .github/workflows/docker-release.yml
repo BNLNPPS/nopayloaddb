@@ -1,9 +1,8 @@
 name: Build and Push Docker Image on Release
 
 on:
-  push:
-    tags:
-      - '*'   # triggers on any tag push
+  release:
+    types: [published]
 
 jobs:
   build:
