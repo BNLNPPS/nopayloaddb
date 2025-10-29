@@ -16,3 +16,4 @@ sphinxcontrib-httpdomain
 sphinx_tabs
 sphinx_copybutton
 sphinx_design
+sphinxcontrib-mermaid

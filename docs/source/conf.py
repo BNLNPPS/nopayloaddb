@@ -53,6 +53,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinx_design',
     'sphinxcontrib.httpdomain',
+    'sphinxcontrib.mermaid',
 ]
 
 # Source file suffix
