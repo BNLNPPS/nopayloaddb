@@ -16,5 +16,5 @@ jobs:
       run: |
         echo "GitHub release/tag: $GITHUB_REF_NAME"
         docker build . \
-        --file Dockerfile \
-        --tag my-image-name:${GITHUB_REF_NAME}
+        --file Dockerfile_prod \
+        --tag nopayloaddb:${GITHUB_REF_NAME}
