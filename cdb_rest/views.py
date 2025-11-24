@@ -881,7 +881,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     piovs[0].major_iov = piov.major_iov_end
                     piovs[0].minor_iov = piov.minor_iov_end
                     piovs[0].comb_iov = Decimal(Decimal(piovs[0].major_iov) + Decimal(piovs[0].major_iov) / 10 ** 19)
-                    piovs[0].save(update_fields=['major_iov', 'minor_iov'])
+                    piovs[0].save(update_fields=['major_iov', 'minor_iov', 'comb_iov'])
 
         piov.payload_list = p_list
         piov.comb_iov = Decimal(Decimal(piov.major_iov) + Decimal(piov.minor_iov) / 10 ** 19)
