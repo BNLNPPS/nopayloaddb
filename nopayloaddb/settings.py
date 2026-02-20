@@ -203,14 +203,17 @@ DATABASES = {
 if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get("POSTGRES_DB", "dbname_project1"),
-        'USER': os.environ.get("POSTGRES_USER", "user_project1"),
-        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", "password_project1"),
+        'NAME': os.environ.get("POSTGRES_DB", "dbname"),
+        'USER': os.environ.get("POSTGRES_USER", "login"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", "password"),
         'HOST': os.environ.get("POSTGRES_HOST", "localhost"),
         'PORT': os.environ.get("POSTGRES_PORT", "5432"),
 
         'CONN_MAX_AGE': 60,  # Close and reopen every 1m
-    }
+    } 
+    # Make read_db_1 and read_db_2 identical to default
+    DATABASES['read_db_1'] = DATABASES['default']
+    DATABASES['read_db_2'] = DATABASES['default']
 
 
 DATABASE_ROUTERS = ['nopayloaddb.db_router.ReadWriteRouter']
