@@ -163,7 +163,7 @@ class PayloadIOVDeleteAPIView(WriteAuthMixin, DestroyAPIView):
                 major_iov_end=self.kwargs['major_iov_end'],
                 minor_iov_end=self.kwargs['minor_iov_end']
             )
-        except:
+        except PayloadIOV.DoesNotExist:
             return None
 
     def destroy(self, request, *args, **kwargs):
