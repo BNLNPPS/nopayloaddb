@@ -116,11 +116,11 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         gt = self.get_gtag()
         if not gt:
-            return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_404_NOT_FOUND)
 
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
         if gt_status.name == 'locked':
-            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is locked."}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(gt)
         if not ret:
             ret = {"detail": "Global tag %s deleted." % gt.name}
@@ -152,7 +152,7 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         piov = self.get_object()
         if not piov:
-            return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
 
         #gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
         #gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
@@ -186,10 +186,10 @@ class PayloadTypeDeleteAPIView(DestroyAPIView):
         ret = {}
         ptype = self.get_ptype()
         if not ptype:
-            return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_404_NOT_FOUND)
         plists = list(self.get_plists(ptype))
         if plists:
-            return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(ptype)
         if not ret:
             ret = {"detail": "Payload Type %s deleted." % ptype.name}
@@ -214,10 +214,10 @@ class PayloadListDeleteAPIView(DestroyAPIView):
         ret = {}
         plist = self.get_plist()
         if not plist:
-            return Response({"detail": "PayloadList %s doesn't exist" % self.kwargs['payloadListName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadList %s doesn't exist" % self.kwargs['payloadListName']}, status=status.HTTP_404_NOT_FOUND)
         piovs = list(self.get_piovs(plist))
         if piovs:
-            return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(plist)
         if not ret:
             ret = {"detail": "Payload Type %s deleted." % plist.name}
@@ -687,7 +687,7 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         # check if the PayloadList of the same type is already attached. If yes then detach
         if (PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type) and gt_status.name == 'locked'):
-            return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_409_CONFLICT)
 
         PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type).update(global_tag=None)
         p_list.global_tag = global_tag
