@@ -440,10 +440,18 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        pl_names = {obj['payload_list'] for obj in data}
+        pl_map = {pl.name: pl for pl in PayloadList.objects.filter(name__in=pl_names)}
+        missing = pl_names - pl_map.keys()
+        if missing:
+            return Response(
+                {"detail": f"PayloadList not found: {', '.join(sorted(missing))}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         batch = [PayloadIOV(id=None, payload_url=obj["payload_url"],
                             major_iov=obj["major_iov"], minor_iov=obj["minor_iov"],
                             major_iov_end=sys.maxsize, minor_iov_end=sys.maxsize,
-                            payload_list=PayloadList.objects.get(name=obj['payload_list']),
+                            payload_list=pl_map[obj['payload_list']],
                             inserted=None,
                             comb_iov=Decimal(Decimal(obj["major_iov"]) + Decimal(obj["minor_iov"]) / 10 ** 19))
                  for obj in data]
