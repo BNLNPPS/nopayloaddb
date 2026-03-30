@@ -35,6 +35,8 @@ from cdb_rest.serializers import PayloadIOVSerializer
 from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
 import cdb_rest.queries
 
+from .iov_comparisons import get_iov_config, compute_comb_iov
+
 
 class GlobalTagDetailAPIView(RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
@@ -390,6 +392,9 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
+
+        iov_config = get_iov_config(settings.CDB_IOV_MODE) #discrete/continous
+
         data = request.data
 
         if 'major_iov_end' not in data:
@@ -397,10 +402,9 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
         if 'minor_iov_end' not in data:
             data['minor_iov_end'] = sys.maxsize
 
-        data['comb_iov'] = Decimal(Decimal(data["major_iov"]) + Decimal(data["minor_iov"]) / 10 ** 19)
-
-        if ((data['major_iov_end'] < data['major_iov']) or (
-                (data['major_iov_end'] == data['major_iov']) and (data['minor_iov_end'] <= data['minor_iov']))):
+        data['comb_iov'] = compute_comb_iov(data['major_iov'], data['minor_iov'])
+ 
+        if self.iov_config['is_invalid_iov_range'](data):
             err_msg = "%s PayloadIOV ending IOVs should be greater or equal than starting." \
                       " Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
                       (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'],
@@ -745,6 +749,9 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
     @transaction.atomic
     def put(self, request, *args, **kwargs):
 
+        iov_config = get_iov_config(settings.CDB_IOV_MODE) #discrete/continous
+        offset = iov_config['next_iov_offset']
+
         data = request.data
 
         try:
@@ -765,9 +772,10 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
 
         list_piovs = PayloadIOV.objects.filter(payload_list=p_list)
 
-        # Check if new PayloadIOV overlaps
+        # Check if new PayloadIOV overlaps. 
         if is_gt_locked:
             # Check if Payload with same start IOVs already attached
+            #TODO: use comp_iov
             piovs = list_piovs.filter(major_iov=piov.major_iov, minor_iov=piov.minor_iov)
             if piovs:
                 payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
@@ -781,52 +789,41 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Special case for Online GT - allow open IOV recover last open IOV
-            special_case = False
-            # if(piov.major_iov_end == sys.maxsize and piov.minor_iov_end == sys.maxsize):
-            if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:
-                #piovs = list_piovs.all().order_by('-major_iov', '-minor_iov')
+            special_case = False            
+            if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:                
                 piovs = list_piovs.all().order_by('-comb_iov')
                 if piovs:
-                    comb_iov, major_iov_end, minor_iov_end = piovs.values_list('comb_iov', 'major_iov_end', 'minor_iov_end')[0]
-                    # if (major_iov_end == sys.maxsize and minor_iov_end == sys.maxsize):
+                    comb_iov, major_iov_end, minor_iov_end = piovs.values_list('comb_iov', 'major_iov_end', 'minor_iov_end')[0]                    
                     if (major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize:
                         #If new open-ended IOV goes after the existing last IOV
                         if comb_iov < piov.comb_iov:
                             special_case = True
 
-                #else:
-                #    special_case = True
-
             if not special_case:
+                #check if new overlaps the tail of the previous
+                #TODO: use comp_iov
                 piovs = list_piovs.filter(Q(major_iov__lt=piov.major_iov) |
                                           Q(major_iov=piov.major_iov, minor_iov__lt=piov.minor_iov)) \
                     .order_by('-major_iov', '-minor_iov')
                 if piovs:
                     payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                         piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
-                    if (piov.major_iov < major_iov_end) or (
-                            (piov.major_iov == major_iov_end) and (piov.minor_iov < minor_iov_end)):
-                        # err_msg = "%s PayloadIOV starting IOVs should be equal or greater than: %d %d. Provided
-                        # start IOVs: %d %d" % \ (piov.payload_url, major_iov_end, minor_iov_end, piov.major_iov,
-                        # piov.minor_iov)
+                    if self.iov_config['is_conflicting_iov_tail'](piov, major_iov_end, minor_iov_end):
                         err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
                                   "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
                                    major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+                #check if new overlaps head of the previous
+                #TODO: use comp_iov
                 piovs = list_piovs.filter(Q(major_iov__gt=piov.major_iov) |
                                           Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)) \
                     .order_by('major_iov', 'minor_iov')
-                if piovs:
-                    # major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
+                if piovs:                    
                     payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                         piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
-                    if (piov.major_iov_end > major_iov) or (
-                            (piov.major_iov_end == major_iov) and (piov.minor_iov_end > minor_iov)):
-                        # err_msg = "%s PayloadIOV ending IOVs should be equal or less than: %d %d. Provided end
-                        # IOVs: %d %d" % \ (piov.payload_url, major_iov, minor_iov, piov.major_iov_end,
-                        # piov.minor_iov_end)
+                    if self.iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
                         err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
                                   "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
@@ -835,6 +832,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
 
         else:
             # piovs fully recovered with inserted to be detached
+            #TODO: use comp_iov
             piovs = list_piovs.filter(
                 Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)) \
                 .filter(Q(major_iov_end__lt=piov.major_iov_end) | Q(major_iov_end=piov.major_iov_end,
@@ -842,31 +840,31 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 .update(payload_list=None)
 
             # cut the end iovs of the previous piov
+            #TODO: use comp_iov
             piovs = list_piovs.filter(
                 Q(major_iov__lt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__lte=piov.minor_iov)).order_by(
                 '-major_iov', '-minor_iov')
             if piovs:
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
-
-                if (piov.major_iov < major_iov_end) or ((piov.major_iov == major_iov_end) and (
-                        (piov.minor_iov < minor_iov_end) or (minor_iov_end is None))):
-                    # piovs[0].update(major_iov_end = piov.major_iov, minor_iov_end = piov.minor_iov )
-
-                    piovs[0].major_iov_end = piov.major_iov
-                    piovs[0].minor_iov_end = piov.minor_iov
+                # Should be descrete/continous specific: (piov.major_iov <= major_iov_end) and (piov.minor_iov_end >= minor_iov)
+                if self.iov_config['is_conflicting_iov'](piov, major_iov_end, minor_iov_end):
+                    
+                    # Should be descrete/continous specific
+                    piovs[0].major_iov_end = piov.major_iov + offset
+                    piovs[0].minor_iov_end = piov.minor_iov + offset
                     piovs[0].save(update_fields=['major_iov_end', 'minor_iov_end'])
 
                 # Check if the new IOV is inserted inside the old one
-                if (piov.major_iov_end < major_iov_end) or (
-                        (piov.major_iov_end == major_iov_end) and (piov.minor_iov_end < minor_iov_end)):
+                if self.iov_config['is_iov_end_inside'](piov, major_iov_end, minor_iov_end):
                     # Create 3rd IOV same URL as 1st A-B(inserted)-A
-
+                    
+                    # Should be descrete/continous specific
                     third_piov = piovs[0]
                     third_piov.major_iov = piov.major_iov_end
                     third_piov.minor_iov = piov.minor_iov_end
                     third_piov.comb_iov = Decimal(Decimal(third_piov.major_iov) + Decimal(third_piov.minor_iov) / 10 ** 19)
-                    third_piov.major_iov_end = major_iov_end
-                    third_piov.minor_iov_end = minor_iov_end
+                    third_piov.major_iov_end = major_iov_end + offset
+                    third_piov.minor_iov_end = minor_iov_end + offset
                     third_piov.id = None
                     third_piov.save()
 
@@ -875,15 +873,14 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     # self.perform_create(third_piov)
 
             # cut the starting iovs of the next piov
+            # Should be descrete/continous specific
+            #TODO: use comp_iov
             piovs = list_piovs.filter(
                 Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)).order_by(
                 'major_iov', 'minor_iov')
             if piovs:
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
-                if (piov.major_iov_end is None) or (piov.major_iov_end > major_iov) or (
-                        (piov.major_iov_end == major_iov) and (
-                        (piov.minor_iov_end > minor_iov) or (piov.minor_iov_end is None))):
-                    # piovs[0].update(major_iov=piov.major_iov_end, minor_iov=piov.minor_iov_end)
+                if self.iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
                     piovs[0].major_iov = piov.major_iov_end
                     piovs[0].minor_iov = piov.minor_iov_end
                     piovs[0].comb_iov = Decimal(Decimal(piovs[0].major_iov) + Decimal(piovs[0].minor_iov) / 10 ** 19)
