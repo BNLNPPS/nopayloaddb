@@ -610,9 +610,14 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
                            {'my_major_iov': self.request.GET.get('majorIOV'),
                             'my_minor_iov': self.request.GET.get('minorIOV'),
                             'my_gt': self.request.GET.get('gtName')})
-            row = cursor.fetchall()
+            if request.GET.get('format') == 'dict':
+                columns = [col[0] for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            else:
+                result = cursor.fetchall()
+            
 
-        return Response(row)
+        return Response(result)
 
 
 class PayloadIOVsRangesListAPIView(ListAPIView):
