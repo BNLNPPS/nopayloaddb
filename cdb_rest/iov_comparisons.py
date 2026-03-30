@@ -104,9 +104,9 @@ IOV_MODE_CONFIG = {
     'continuous': {
         'next_iov_offset':    0,
         'is_invalid_iov_range':      is_invalid_iov_range_continuous,
-        'is_conflicting_iov':        is_conflicting_iov_continous,
-        'is_conflicting_iov_end':    is_conflicting_iov_end_continous,
-        'is_iov_end_inside':         is_iov_end_inside_continous,
+        'is_conflicting_iov':        is_conflicting_iov_continuous,
+        'is_conflicting_iov_end':    is_conflicting_iov_end_continuous,
+        'is_iov_end_inside':         is_iov_end_inside_continuous,
 
     },
 }
