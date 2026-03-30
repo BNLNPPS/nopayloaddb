@@ -261,7 +261,10 @@ SIMPLE_JWT = {
     #'JTI_CLAIM': 'jti',
 }
 
+CDB_IOV_MODE = os.environ.get('CDB_IOV_MODE', 'continuous')
 
+if CDB_IOV_MODE not in ('discrete', 'continuous'):
+    raise ValueError(f"Invalid CDB_IOV_MODE '{CDB_IOV_MODE}'. Must be 'discrete' or 'continuous'.")
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
