@@ -600,6 +600,11 @@ class PayloadIOVsORMOrderByListAPIView(ListAPIView):
         return Response(serializer.data)
 
 
+def _resolve_query(setting_name, default):
+    query_name = getattr(settings, setting_name, None)
+    if query_name:
+        return getattr(cdb_rest.queries, query_name)
+    return default
 class PayloadIOVsSQLListAPIView(ListAPIView):
 
     def list(self, request):
@@ -609,8 +614,11 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
         # If at least one read database is available, use it; otherwise, use "default"
         read_db = random.choice(read_dbs) if read_dbs else "default"
 
+        query = _resolve_query('CDB_PAYLOAD_IOVS_QUERY', cdb_rest.queries.get_payload_iovs)
+
+
         with connections[read_db].cursor() as cursor:
-            cursor.execute(cdb_rest.queries.get_payload_iovs,
+            cursor.execute(query,
                            {'my_major_iov': self.request.GET.get('majorIOV'),
                             'my_minor_iov': self.request.GET.get('minorIOV'),
                             'my_gt': self.request.GET.get('gtName')})

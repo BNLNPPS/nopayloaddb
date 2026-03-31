@@ -57,7 +57,7 @@ def is_conflicting_iov_end_discrete(piov, major_iov, minor_iov):
     return (
         (piov.major_iov_end >= major_iov) or
         ((piov.major_iov_end == major_iov) and 
-         ((piov.minor_iov_end >= minor_iov) or (minor_iov_end is None))
+         ((piov.minor_iov_end >= minor_iov) or (minor_iov_end is None)))
     )
 
 
@@ -65,7 +65,7 @@ def is_conflicting_iov_end_continuous(piov, major_iov, minor_iov):
     return (
         (piov.major_iov_end > major_iov) or
         ((piov.major_iov_end == major_iov) and 
-         ((piov.minor_iov_end > minor_iov) or (minor_iov_end is None))
+         ((piov.minor_iov_end > minor_iov) or (minor_iov_end is None)))
     )
 
 
@@ -73,7 +73,7 @@ def is_iov_end_inside_discrete(piov, major_iov_end, minor_iov_end):
     return (
         (piov.major_iov_end < major_iov_end) or
         ((piov.major_iov_end == major_iov_end) and
-         ((piov.minor_iov_end <= minor_iov_end) or (minor_iov_end is None))
+         ((piov.minor_iov_end <= minor_iov_end) or (minor_iov_end is None)))
     )
 
 
@@ -81,7 +81,7 @@ def is_iov_end_inside_continuous(piov, major_iov_end, minor_iov_end):
     return (
         (piov.major_iov_end < major_iov_end) or
         ((piov.major_iov_end == major_iov_end) and
-         ((piov.minor_iov_end < minor_iov_end) or (minor_iov_end is None))
+         ((piov.minor_iov_end < minor_iov_end) or (minor_iov_end is None)))
     )
 
 

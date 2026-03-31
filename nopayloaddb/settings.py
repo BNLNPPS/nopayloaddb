@@ -262,6 +262,7 @@ SIMPLE_JWT = {
 }
 
 CDB_IOV_MODE = os.environ.get('CDB_IOV_MODE', 'continuous')
+CDB_PAYLOAD_IOVS_QUERY = "get_payload_iovs_with_extra"  # omit to use default
 
 if CDB_IOV_MODE not in ('discrete', 'continuous'):
     raise ValueError(f"Invalid CDB_IOV_MODE '{CDB_IOV_MODE}'. Must be 'discrete' or 'continuous'.")
