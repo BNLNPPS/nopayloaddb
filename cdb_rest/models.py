@@ -101,7 +101,7 @@ class PayloadIOV(models.Model):
     major_iov_end = models.BigIntegerField(db_column='major_iov_end')
     minor_iov_end = models.BigIntegerField(db_column='minor_iov_end')
     payload_list = models.ForeignKey(PayloadList, related_name='payload_iov', on_delete=models.CASCADE, null=True)
-    description = models.CharField(max_length=255, db_column='description', null=True)
+    extra = models.CharField(max_length=255, db_column='extra', null=True)
     inserted = models.DateTimeField(auto_now_add=True, db_column='created')
     updated = models.DateTimeField(auto_now=True, db_column='updated')
     comb_iov = models.DecimalField(db_column='comb_iov', max_digits=38, decimal_places=19, null=True)
