@@ -266,6 +266,12 @@ CDB_PAYLOAD_IOVS_QUERY = "get_payload_iovs_with_extra"  # omit to use default
 
 if CDB_IOV_MODE not in ('discrete', 'continuous'):
     raise ValueError(f"Invalid CDB_IOV_MODE '{CDB_IOV_MODE}'. Must be 'discrete' or 'continuous'.")
+# Collect all CDB_ prefixed env variables
+CDB_USER_SETTINGS = {
+    key: value
+    for key, value in os.environ.items()
+    if key.startswith('CDB_')
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
