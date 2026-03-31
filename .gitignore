@@ -11,3 +11,4 @@ db/
 **/migrations/*.pyc
 cdb_rest/migrations/__init__.py
 .DS_Store
+CLAUDE.md
