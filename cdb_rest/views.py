@@ -405,7 +405,7 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
 
         data['comb_iov'] = compute_comb_iov(data['major_iov'], data['minor_iov'])
  
-        if self.iov_config['is_invalid_iov_range'](data):
+        if iov_config['is_invalid_iov_range'](data):
             err_msg = "%s PayloadIOV ending IOVs should be greater or equal than starting." \
                       " Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
                       (data['payload_url'], data['major_iov'], data['major_iov_end'], data['minor_iov'],
@@ -817,7 +817,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 if piovs:
                     payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                         piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
-                    if self.iov_config['is_conflicting_iov_tail'](piov, major_iov_end, minor_iov_end):
+                    if iov_config['is_conflicting_iov_tail'](piov, major_iov_end, minor_iov_end):
                         err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
                                   "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
@@ -832,7 +832,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 if piovs:                    
                     payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                         piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
-                    if self.iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
+                    if iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
                         err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
                                   "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                                   (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
@@ -856,7 +856,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             if piovs:
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
                 # Should be descrete/continous specific: (piov.major_iov <= major_iov_end) and (piov.minor_iov_end >= minor_iov)
-                if self.iov_config['is_conflicting_iov'](piov, major_iov_end, minor_iov_end):
+                if iov_config['is_conflicting_iov'](piov, major_iov_end, minor_iov_end):
                     
                     # Should be descrete/continous specific
                     piovs[0].major_iov_end = piov.major_iov + offset
@@ -864,7 +864,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     piovs[0].save(update_fields=['major_iov_end', 'minor_iov_end'])
 
                 # Check if the new IOV is inserted inside the old one
-                if self.iov_config['is_iov_end_inside'](piov, major_iov_end, minor_iov_end):
+                if iov_config['is_iov_end_inside'](piov, major_iov_end, minor_iov_end):
                     # Create 3rd IOV same URL as 1st A-B(inserted)-A
                     
                     # Should be descrete/continous specific
@@ -889,7 +889,7 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 'major_iov', 'minor_iov')
             if piovs:
                 major_iov, minor_iov = piovs.values_list('major_iov', 'minor_iov')[0]
-                if self.iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
+                if iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
                     piovs[0].major_iov = piov.major_iov_end
                     piovs[0].minor_iov = piov.minor_iov_end
                     piovs[0].comb_iov = Decimal(Decimal(piovs[0].major_iov) + Decimal(piovs[0].minor_iov) / 10 ** 19)
