@@ -9,6 +9,7 @@ from cdb_rest.views import PayloadListAttachAPIView, GlobalTagChangeStatusAPIVie
 from cdb_rest.views import PayloadIOVBulkCreationAPIView
 from cdb_rest.views import GlobalTagDeleteAPIView, PayloadIOVDeleteAPIView, PayloadTypeDeleteAPIView, PayloadListDeleteAPIView
 from cdb_rest.views import GlobalTagCloneAPIView
+from cdb_rest.views import CDBSettingAPIView
 from cdb_rest.views import TimeoutListAPIView
 
 app_name = 'cdb_rest'
@@ -45,6 +46,7 @@ urlpatterns = [
     #path('payloadiovs_orm_max/', PayloadIOVsORMMaxListAPIView.as_view(), name="payloadiovs_orm_max"),
     # path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
+    path('user_settings/<str:name>/', CDBSettingAPIView.as_view()),
     path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
 
 ]

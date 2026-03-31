@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, \
     UpdateAPIView, RetrieveAPIView
+from rest_framework.views import APIView
 from rest_framework.generics import DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -972,3 +973,15 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         #serializer = GlobalTagCreateSerializer(gt)
 
         return Response(serializer.data)
+    
+class CDBSettingAPIView(APIView):
+
+    def get(self, request, name):
+        if name not in settings.CDB_USER_SETTINGS:
+            return Response(
+                {"detail": f"Setting '{name}' not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        value = settings.CDB_USER_SETTINGS.get(name)
+
+        return Response({name: value})
