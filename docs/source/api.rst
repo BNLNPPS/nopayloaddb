@@ -437,57 +437,67 @@ Main Payload Query Endpoint
    :query gtName: Global tag name (required)
    :query majorIOV: Major IOV value (required)
    :query minorIOV: Minor IOV value (required)
-   :query payloadType: Filter by payload type name (optional)
+   :query shape: Response format — ``dict`` for list of dictionaries with named keys, omit for default list of tuples (optional)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      # Basic query
+      # Basic query (returns list of tuples)
       curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999'
 
-      # Filter by payload type
-      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&payloadType=Beam'
+      # Query with dictionary response format
+      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
 
-   **Example Response:**
+   **Response Formats:**
+
+   By default, the endpoint returns results as a list of tuples (arrays). Each tuple contains
+   the fields in this order: ``payload_type_name``, ``payload_url``, ``checksum``, ``size``,
+   ``major_iov``, ``minor_iov``, ``major_iov_end``, ``minor_iov_end``.
+
+   You can optionally pass ``shape=dict`` to get results as a list of dictionaries with named keys.
+
+   **Default Response (list of tuples):**
+
+   .. code-block:: bash
+
+      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999'
+
+   .. code-block:: json
+
+      [
+        [
+          "Beam",
+          "D0DXMagnets.dat",
+          "sha256:abc123...",
+          1024,
+          0,
+          999999,
+          0,
+          999999
+        ]
+      ]
+
+   **Dictionary Response (shape=dict):**
+
+   .. code-block:: bash
+
+      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
 
    .. code-block:: json
 
       [
         {
-          "id": 210,
-          "name": "Beam_210",
-          "global_tag": "sPHENIX_ExampleGT_24",
-          "payload_type": "Beam",
-          "payload_iov": [
-            {
-              "id": 13425388,
-              "payload_url": "D0DXMagnets.dat",
-              "major_iov": 0,
-              "minor_iov": 999999,
-              "major_iov_end": 0,
-              "minor_iov_end": 999999,
-              "payload_list": "Beam_210",
-              "checksum": "sha256:abc123...",
-              "size": 1024,
-              "description": "Beam parameters for run period",
-              "created": "2022-02-21T15:28:20.949696Z"
-            }
-          ],
-          "created": "2022-02-21T15:17:06.481186Z"
+          "payload_type_name": "Beam",
+          "payload_url": "D0DXMagnets.dat",
+          "checksum": "sha256:abc123...",
+          "size": 1024,
+          "major_iov": 0,
+          "minor_iov": 999999,
+          "major_iov_end": 0,
+          "minor_iov_end": 999999
         }
       ]
-
-Alternative Query Endpoints
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. http:get:: /api/cdb_rest/payloadiovs_orm_orderby/
-
-   Alternative ORM-based query endpoint with ordering.
-
-.. http:get:: /api/cdb_rest/payloadiovs_orm_max/
-
-   Get maximum IOV values for optimization.
 
 Create Payload IOV
 ~~~~~~~~~~~~~~~~~~
@@ -623,13 +633,13 @@ Get All Conditions for a Run
    # Get all conditions for run 12345
    curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345'
 
-Get Specific Detector Conditions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get Conditions as Dictionaries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-   # Get only beam conditions for a run
-   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345&payloadType=Beam'
+   # Get conditions with named keys for easier processing
+   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345&shape=dict'
 
 List All Available Global Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -708,7 +718,7 @@ Performance Tips
 Query Optimization
 ~~~~~~~~~~~~~~~~~~
 
-1. **Use Specific Queries**: Include payload type filters when possible
+1. **Use Tuple Format**: Omit ``shape=dict`` when performance matters — the default tuple format has less overhead
 2. **Batch Operations**: Use bulk endpoints for multiple operations
 3. **Appropriate IOV Ranges**: Use precise IOV ranges to limit result sets
 4. **Caching**: Cache frequently accessed data on the client side
@@ -735,8 +745,12 @@ Python Integration
            self.base_url = base_url.rstrip('/')
            self.api_base = f"{self.base_url}/api/cdb_rest"
        
-       def get_conditions(self, gt_name, major_iov, minor_iov, payload_type=None):
-           """Get conditions for a specific global tag and IOV."""
+       def get_conditions(self, gt_name, major_iov, minor_iov, payload_type=None, shape=None):
+           """Get conditions for a specific global tag and IOV.
+
+           Args:
+               shape: Pass 'dict' for named-key dictionaries, or None for tuples.
+           """
            params = {
                'gtName': gt_name,
                'majorIOV': major_iov,
@@ -744,7 +758,9 @@ Python Integration
            }
            if payload_type:
                params['payloadType'] = payload_type
-           
+           if shape:
+               params['shape'] = shape
+
            response = requests.get(f"{self.api_base}/payloadiovs/", params=params)
            response.raise_for_status()
            return response.json()
@@ -763,8 +779,14 @@ Python Integration
    
    # Usage example
    client = NopayloaddbClient('http://localhost:8000')
+   # Default: returns list of tuples
    conditions = client.get_conditions('sPHENIX_ExampleGT_24', 0, 999999)
-   print(f"Found conditions for {len(conditions)} payload types")
+   print(f"Found {len(conditions)} payload IOVs")
+
+   # With shape='dict': returns list of dictionaries with named keys
+   conditions = client.get_conditions('sPHENIX_ExampleGT_24', 0, 999999, shape='dict')
+   for c in conditions:
+       print(f"{c['payload_type_name']}: {c['payload_url']}")
 
 Shell Script Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -776,13 +798,13 @@ Shell Script Integration
    API_BASE="http://localhost:8000/api/cdb_rest"
    GT_NAME="Production_GT_v2.1"
    
-   # Function to get conditions for a run
+   # Function to get conditions for a run (using shape=dict for named fields)
    get_conditions() {
        local gt_name=$1
        local run_number=$2
-       
-       curl -s "${API_BASE}/payloadiovs/?gtName=${gt_name}&majorIOV=0&minorIOV=${run_number}" \
-           | jq -r '.[] | "\(.payload_type): \(.payload_iov[0].payload_url)"'
+
+       curl -s "${API_BASE}/payloadiovs/?gtName=${gt_name}&majorIOV=0&minorIOV=${run_number}&shape=dict" \
+           | jq -r '.[] | "\(.payload_type_name): \(.payload_url)"'
    }
    
    # Function to list available global tags
