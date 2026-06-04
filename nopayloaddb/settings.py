@@ -261,7 +261,12 @@ SIMPLE_JWT = {
     #'JTI_CLAIM': 'jti',
 }
 
-
+# Collect all CDB_ prefixed env variables
+CDB_USER_SETTINGS = {
+    key: value
+    for key, value in os.environ.items()
+    if key.startswith('CDB_')
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
