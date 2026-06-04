@@ -26,7 +26,7 @@ Common Workflows
 
 The most common operation is querying for payloads based on a Global Tag and IOV.
 
-**Basic Query**
+**Basic Query (default tuple format)**
 
 .. code-block:: bash
 
@@ -34,33 +34,46 @@ The most common operation is querying for payloads based on a Global Tag and IOV
 
 **Response**
 
+By default, results are returned as a list of tuples with fields in order:
+``payload_type_name``, ``payload_url``, ``checksum``, ``size``, ``major_iov``, ``minor_iov``, ``major_iov_end``, ``minor_iov_end``.
+
+.. code-block:: json
+
+   [
+     [
+       "Beam",
+       "D0DXMagnets.dat",
+       "sha256:abc123...",
+       1024,
+       0,
+       999999,
+       0,
+       999999
+     ]
+   ]
+
+**Query with dictionary format**
+
+Pass ``shape=dict`` to get results as dictionaries with named keys:
+
+.. code-block:: bash
+
+   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
+
 .. code-block:: json
 
    [
      {
-       "id": 210,
-       "name": "Beam_210",
-       "global_tag": "sPHENIX_ExampleGT_24",
-       "payload_type": "Beam",
-       "payload_iov": [
-         {
-           "id": 13425388,
-           "payload_url": "D0DXMagnets.dat",
-           "major_iov": 0,
-           "minor_iov": 999999,
-           "payload_list": "Beam_210",
-           "created": "2022-02-21T15:28:20.949696"
-         }
-       ],
-       "created": "2022-02-21T15:17:06.481186"
+       "payload_type_name": "Beam",
+       "payload_url": "D0DXMagnets.dat",
+       "checksum": "sha256:abc123...",
+       "size": 1024,
+       "major_iov": 0,
+       "minor_iov": 999999,
+       "major_iov_end": 0,
+       "minor_iov_end": 999999
      }
    ]
-
-**Filter by Payload Type**
-
-.. code-block:: bash
-
-   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&payloadType=Beam&majorIOV=0&minorIOV=999999'
 
 2. Managing Global Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -289,7 +302,7 @@ Query Optimization
 
 **Use Specific Queries**
 
-- Include payload type filters when possible
+- Omit ``shape=dict`` when performance matters — the default tuple format has less overhead
 - Use appropriate IOV ranges to limit results
 - Prefer the main ``/payloadiovs/`` endpoint for complex queries
 
@@ -321,16 +334,20 @@ Python Client Example
            self.base_url = base_url.rstrip('/')
            self.api_base = f"{self.base_url}/api/cdb_rest"
        
-       def get_payloads(self, gt_name, major_iov, minor_iov, payload_type=None):
-           """Get payloads for a specific global tag and IOV."""
+       def get_payloads(self, gt_name, major_iov, minor_iov, shape=None):
+           """Get payloads for a specific global tag and IOV.
+
+           Args:
+               shape: Pass 'dict' for named-key dictionaries, or None for tuples.
+           """
            params = {
                'gtName': gt_name,
                'majorIOV': major_iov,
                'minorIOV': minor_iov
            }
-           if payload_type:
-               params['payloadType'] = payload_type
-           
+           if shape:
+               params['shape'] = shape
+
            response = requests.get(f"{self.api_base}/payloadiovs/", params=params)
            response.raise_for_status()
            return response.json()
@@ -349,8 +366,14 @@ Python Client Example
 
    # Usage
    client = NopayloaddbClient('http://localhost:8000')
+   # Default: list of tuples
    payloads = client.get_payloads('sPHENIX_ExampleGT_24', 0, 999999)
-   print(f"Found {len(payloads)} payload types")
+   print(f"Found {len(payloads)} payload IOVs")
+
+   # With named keys
+   payloads = client.get_payloads('sPHENIX_ExampleGT_24', 0, 999999, shape='dict')
+   for p in payloads:
+       print(f"{p['payload_type_name']}: {p['payload_url']}")
 
 Shell Script Example
 ~~~~~~~~~~~~~~~~~~~~~
