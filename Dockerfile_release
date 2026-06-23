@@ -34,6 +34,9 @@ CMD gunicorn \
   --timeout 1800 \
   --workers 1 \
   --threads 4 \
-  --log-file /var/log/gunicorn.log \
+  --access-logfile - \
+  --error-logfile - \
+  --log-level info \
   nopayloaddb.wsgi:application \
-  --bind 0.0.0.0:8000
+  --bind 0.0.0.0:8000 \
+  2>&1 | tee /var/log/gunicorn.log
