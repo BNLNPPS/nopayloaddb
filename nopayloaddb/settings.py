@@ -219,20 +219,17 @@ if os.environ.get("DJANGO_DB_CONFIG") == "test_project":
 DATABASE_ROUTERS = ['nopayloaddb.db_router.ReadWriteRouter']
 
 REST_FRAMEWORK = {
-#    'DEFAULT_AUTHENTICATION_CLASSES': (
-#        'rest_framework.authentication.TokenAuthentication',
-#    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'cdb_rest.authentication.CustomJWTAuthentication',
-    ),
-    #'DEFAULT_PERMISSION_CLASSES': (
-    #    'rest_framework.permissions.IsAuthenticated',
-    #),
-
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
-PERMISSION_PLUGIN_CLASS = "cdb_rest.permissions_plugins.belle2.Belle2PermissionPlugin"
+_auth_class = os.environ.get('CDB_AUTH_CLASS', '')
+if _auth_class:
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (_auth_class,)
+
+PERMISSION_PLUGIN_CLASS = os.environ.get(
+    'CDB_PERMISSION_PLUGIN_CLASS',
+    'cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin'
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
