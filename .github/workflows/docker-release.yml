@@ -27,6 +27,6 @@ jobs:
           REPO_LOWER=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
           echo "GitHub release/tag: $GITHUB_REF_NAME"
           docker build . \
-            --file Dockerfile_prod \
+            --file Dockerfile_release \
             --tag ghcr.io/${REPO_LOWER}/nopayloaddb:${GITHUB_REF_NAME}
           docker push ghcr.io/${REPO_LOWER}/nopayloaddb:${GITHUB_REF_NAME}
