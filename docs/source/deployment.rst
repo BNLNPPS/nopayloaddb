@@ -298,7 +298,7 @@ Helm Charts Deployment
 
 .. note::
    **Official Helm Charts**: Nopayloaddb provides official Helm charts for production deployments on Kubernetes and OpenShift clusters. These charts are actively maintained and include configurations for different HEP experiments.
-   Phase 3 worker/CronJob deployment manifests (for example the EXPLAIN collector scheduler) are maintained in the separate ``nopayloaddb-charts`` repository, not in this application repository.
+   worker/CronJob deployment manifests (for example the EXPLAIN collector scheduler) are maintained in the separate ``nopayloaddb-charts`` repository, not in this application repository.
 
 **Repository**: https://github.com/BNLNPPS/nopayloaddb-charts
 
