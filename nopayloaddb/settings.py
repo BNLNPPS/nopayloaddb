@@ -222,9 +222,7 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
-#_auth_class = os.environ.get('CDB_AUTH_CLASS', '')
-#if _auth_class:
-#    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (_auth_class,)
+CDB_AUTH_CLASS = os.environ.get('CDB_AUTH_CLASS', '')
 
 PERMISSION_PLUGIN_CLASS = os.environ.get(
     'CDB_PERMISSION_PLUGIN_CLASS',
