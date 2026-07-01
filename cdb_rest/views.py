@@ -1,53 +1,55 @@
 import sys
 import time
 import random
-
-from django.conf import settings
-
-from django.shortcuts import get_object_or_404
 from decimal import Decimal
 
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView, \
-    UpdateAPIView, RetrieveAPIView
-from rest_framework.views import APIView
-from rest_framework.generics import DestroyAPIView
-from rest_framework.response import Response
-from rest_framework import status
-# from rest_framework.renderers import JSONRenderer
-# from rest_framework.permissions import IsAuthenticated, AllowAny
-# from cdb_rest.authentication import CustomJWTAuthentication
-
-from django.db import transaction, connection, connections
-
-from django.db.models import Prefetch
-from django.db.models import Q
-from django.db.models import Max
+from django.conf import settings
+from django.db import transaction, connections
+from django.db.models import Prefetch, Q, Max
 from django.forms.models import model_to_dict
+from django.shortcuts import get_object_or_404
 
-# from django.db.models import QuerySet
-# from django.forms.models import model_to_dict
+from rest_framework import status
+from rest_framework.generics import (
+    ListCreateAPIView, CreateAPIView, ListAPIView,
+    UpdateAPIView, RetrieveAPIView, DestroyAPIView
+)
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from cdb_rest.models import GlobalTag, GlobalTagStatus, PayloadList, PayloadType, PayloadIOV, PayloadListIdSequence
-# from todos.permissions import UserIsOwnerTodo
-from cdb_rest.serializers import GlobalTagCreateSerializer, GlobalTagReadSerializer, GlobalTagStatusSerializer, \
-    GlobalTagListSerializer
-from cdb_rest.serializers import PayloadListCreateSerializer, PayloadListReadSerializer, PayloadTypeSerializer
-from cdb_rest.serializers import PayloadIOVSerializer
-from cdb_rest.serializers import PayloadListSerializer, PayloadListReadShortSerializer
+from cdb_rest.authentication import CustomJWTAuthentication
+from cdb_rest.models import (
+    GlobalTag, GlobalTagStatus, PayloadList, PayloadType,
+    PayloadIOV, PayloadListIdSequence
+)
+from cdb_rest.serializers import (
+    GlobalTagCreateSerializer, GlobalTagReadSerializer,
+    GlobalTagStatusSerializer, GlobalTagListSerializer,
+    PayloadListCreateSerializer, PayloadListReadSerializer,
+    PayloadTypeSerializer, PayloadIOVSerializer,
+    PayloadListSerializer, PayloadListReadShortSerializer
+)
 import cdb_rest.queries
-
 from .iov_comparisons import get_iov_config, compute_comb_iov
-
-#Permissions plugin
 from .utils import load_permission_plugin
 
-class GlobalTagDetailAPIView(RetrieveAPIView):
+
+class WriteAuthMixin:
+    """Require JWT authentication for write methods (POST/PUT/PATCH/DELETE), allow anonymous reads."""
+    def get_authenticators(self):
+        if self.request and self.request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return [CustomJWTAuthentication()]
+        return []
+
+
+# ── GlobalTag views ──────────────────────────────────────────────────────────
+
+class GlobalTagDetailAPIView(WriteAuthMixin, RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
-    # permission_classes = (IsAuthenticated, UserIsOwnerTodo)
 
 
-class GlobalTagByNameDetailAPIView(RetrieveAPIView):
+class GlobalTagByNameDetailAPIView(WriteAuthMixin, RetrieveAPIView):
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
     lookup_url_kwarg = 'globalTagName'
@@ -59,37 +61,33 @@ class GlobalTagByNameDetailAPIView(RetrieveAPIView):
         return obj
 
 
-class TimeoutListAPIView(ListAPIView):
+class TimeoutListAPIView(WriteAuthMixin, ListAPIView):
+    """Test endpoint that simulates a long-running request (30 min timeout)."""
 
     def list(self, request):
         time.sleep(1800)
         return Response()
 
 
-class GlobalTagListCreationAPIView(ListCreateAPIView):
-    #authentication_classes = [CustomJWTAuthentication]
-    #permission_classes = (IsAuthenticated)
-
-
+class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
+    """List all GlobalTags (GET) or create a new one (POST). Requires admin permission to create."""
     serializer_class = GlobalTagCreateSerializer
 
     def get_queryset(self):
         return GlobalTag.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = GlobalTagReadSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-
         data = request.data
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['name']}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-        
+
         try:
             gt_status = GlobalTagStatus.objects.get(name=data['status'])
             data['status'] = gt_status.pk
@@ -98,25 +96,22 @@ class GlobalTagListCreationAPIView(ListCreateAPIView):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        #self.perform_create(serializer)
         try:
             instance = serializer.save()
         except Exception as e:
             return Response({"detail": "GlobalTag creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "GlobalTag was not saved to DB."}, status=500)
 
         ret = serializer.data
         ret['status'] = gt_status.name
-
         return Response(ret)
 
 
-class GlobalTagDeleteAPIView(DestroyAPIView):
+class GlobalTagDeleteAPIView(WriteAuthMixin, DestroyAPIView):
+    """Delete a GlobalTag by name. Locked and frozen GTs are immutable."""
     serializer_class = GlobalTagReadSerializer
-    # permission_classes = [IsAuthenticated]
     lookup_url_kwarg = 'globalTagName'
     lookup_field = 'name'
 
@@ -127,9 +122,8 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             return None
 
     def destroy(self, request, *args, **kwargs):
-
         plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs['globalTagName']}   
+        target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs['globalTagName']}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -138,7 +132,6 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
-        #Locked and Frozen GTs are immutable
         if gt_status.name in ['locked', 'frozen']:
             return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(gt)
@@ -146,12 +139,15 @@ class GlobalTagDeleteAPIView(DestroyAPIView):
             ret = {"detail": "Global tag %s deleted." % gt.name}
         return Response(ret)
 
-class PayloadIOVDeleteAPIView(DestroyAPIView):
+
+
+# ── PayloadIOV views ─────────────────────────────────────────────────────────
+
+class PayloadIOVDeleteAPIView(WriteAuthMixin, DestroyAPIView):
+    """Delete a PayloadIOV. Frozen GTs are immutable."""
     serializer_class = PayloadIOVSerializer
-    # permission_classes = [IsAuthenticated]
 
     def get_object(self):
-
         if 'major_iov_end' not in self.kwargs:
             self.kwargs['major_iov_end'] = sys.maxsize
         if 'minor_iov_end' not in self.kwargs:
@@ -170,7 +166,6 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
             return None
 
     def destroy(self, request, *args, **kwargs):
-
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs['globalTagName']}
         if not plugin.has_permission(request, target_object):
@@ -184,17 +179,19 @@ class PayloadIOVDeleteAPIView(DestroyAPIView):
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
 
         if gt_status.name == 'frozen':
-            return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         ret = self.perform_destroy(piov)
         if not ret:
             ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
         return Response(ret)
 
-class PayloadTypeDeleteAPIView(DestroyAPIView):
+
+
+# ── PayloadType views ────────────────────────────────────────────────────────
+
+class PayloadTypeDeleteAPIView(WriteAuthMixin, DestroyAPIView):
+    """Delete a PayloadType. Fails if any PayloadLists reference it."""
     serializer_class = PayloadTypeSerializer
-    # permission_classes = [IsAuthenticated]
-    #lookup_url_kwarg = 'payloadTypeName'
-    #lookup_field = 'name'
 
     def get_ptype(self):
         try:
@@ -221,7 +218,12 @@ class PayloadTypeDeleteAPIView(DestroyAPIView):
             ret = {"detail": "Payload Type %s deleted." % ptype.name}
         return Response(ret)
 
-class PayloadListDeleteAPIView(DestroyAPIView):
+
+
+# ── PayloadList views ────────────────────────────────────────────────────────
+
+class PayloadListDeleteAPIView(WriteAuthMixin, DestroyAPIView):
+    """Delete a PayloadList. Fails if it contains any PayloadIOVs."""
     serializer_class = PayloadListSerializer
 
     def get_plist(self):
@@ -249,43 +251,45 @@ class PayloadListDeleteAPIView(DestroyAPIView):
             ret = {"detail": "Payload Type %s deleted." % plist.name}
         return Response(ret)
 
-class GlobalTagsListAPIView(ListAPIView):
+
+
+# ── List views ───────────────────────────────────────────────────────────────
+
+class GlobalTagsListAPIView(WriteAuthMixin, ListAPIView):
+    """List all GlobalTags with attached PayloadLists summary."""
     serializer_class = GlobalTagListSerializer
 
     def get_queryset(self):
         return GlobalTag.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = GlobalTagListSerializer(queryset, many=True)
-
         return Response(serializer.data)
 
 
-class GlobalTagsPayloadListsListAPIView(ListAPIView):
-
-    # serializer_class = PayloadListReadSerializer
+class GlobalTagsPayloadListsListAPIView(WriteAuthMixin, ListAPIView):
+    """List PayloadLists for a given GlobalTag as a {payload_type: name} map."""
 
     def get_queryset(self):
         gt_name = self.kwargs.get('globalTagName')
         return PayloadList.objects.filter(global_tag__name=gt_name)
 
     def list(self, request, *args, **kwargs):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = PayloadListReadShortSerializer(queryset, many=True)
         ret = {}
         if serializer.data:
             for pl in serializer.data:
                 ret[pl['payload_type']] = pl['name']
-
         return Response(ret)
 
 
-class GlobalTagStatusCreationAPIView(ListCreateAPIView):
-    # authentication_classes = ()
-    # permission_classes = ()
+
+# ── Status views ─────────────────────────────────────────────────────────────
+
+class GlobalTagStatusCreationAPIView(WriteAuthMixin, ListCreateAPIView):
+    """List or create GlobalTag statuses (unlocked, locked, frozen)."""
     serializer_class = GlobalTagStatusSerializer
     lookup_field = 'name'
 
@@ -293,7 +297,6 @@ class GlobalTagStatusCreationAPIView(ListCreateAPIView):
         return GlobalTagStatus.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = GlobalTagStatusSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -301,22 +304,22 @@ class GlobalTagStatusCreationAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        #self.perform_create(serializer)
         try:
             instance = serializer.save()
         except Exception as e:
             return Response({"detail": "GlobalTagStatus creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "GlobalTagStatus was not saved to DB."}, status=500)
 
         return Response(serializer.data)
 
 
-class PayloadListListCreationAPIView(ListCreateAPIView):
-    # authentication_classes = ()
-    # permission_classes = ()
+
+# ── Creation views ───────────────────────────────────────────────────────────
+
+class PayloadListListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
+    """List all PayloadLists (GET) or create a new one (POST). Auto-generates name from PayloadType + sequence ID."""
     serializer_class = PayloadListCreateSerializer
 
     @staticmethod
@@ -327,7 +330,6 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         return PayloadList.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = PayloadListReadSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -345,42 +347,36 @@ class PayloadListListCreationAPIView(ListCreateAPIView):
         except KeyError:
             return Response({"detail": "PayloadType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Remove GT if provided
         data['global_tag'] = None
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        #self.perform_create(serializer)
         try:
             instance = serializer.save()
         except Exception as e:
             return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
         ret = serializer.data
         ret['payload_type'] = payload_type.name
-
         return Response(ret)
 
 
-class PayloadListDetailAPIView(RetrieveAPIView):
+class PayloadListDetailAPIView(WriteAuthMixin, RetrieveAPIView):
     serializer_class = PayloadListCreateSerializer
     queryset = PayloadList.objects.all()
 
 
-class PayloadTypeListCreationAPIView(ListCreateAPIView):
-    # authentication_classes = ()
-    # permission_classes = ()
+class PayloadTypeListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
+    """List all PayloadTypes (GET) or create a new one (POST)."""
     serializer_class = PayloadTypeSerializer
 
     def get_queryset(self):
         return PayloadType.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = PayloadTypeSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -388,36 +384,31 @@ class PayloadTypeListCreationAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        #self.perform_create(serializer)
         try:
             instance = serializer.save()
         except Exception as e:
             return Response({"detail": "PayloadType creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-         # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadType was not saved to DB."}, status=500)
 
         return Response(serializer.data)
 
 
-class PayloadIOVListCreationAPIView(ListCreateAPIView):
-    #    authentication_classes = ()
-    #    permission_classes = ()
+class PayloadIOVListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
+    """List all PayloadIOVs (GET) or create a new one (POST). Validates IOV ranges based on CDB_IOV_MODE."""
     serializer_class = PayloadIOVSerializer
 
     def get_queryset(self):
         return PayloadIOV.objects.all()
 
     def list(self, request):
-        # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-
-        iov_config = get_iov_config(settings.CDB_IOV_MODE) #discrete/continous
+        iov_config = get_iov_config(settings.CDB_IOV_MODE)
 
         data = request.data
 
@@ -432,7 +423,7 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
             data['minor_iov_end'] = sys.maxsize
 
         data['comb_iov'] = compute_comb_iov(data['major_iov'], data['minor_iov'])
- 
+
         if iov_config['is_invalid_iov_range'](data):
             err_msg = "%s PayloadIOV ending IOVs should be greater or equal than starting." \
                       " Provided end IOVs: major_iov: %d major_iov_end: %d minor_iov: %d minor_iov_end: %d" % \
@@ -442,30 +433,25 @@ class PayloadIOVListCreationAPIView(ListCreateAPIView):
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        #self.perform_create(serializer)
         try:
             instance = serializer.save()
         except Exception as e:
             return Response({"detail": "PayloadIOV creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadIOV was not saved to DB."}, status=500)
 
         ret = serializer.data
-
         return Response(ret)
 
 
-class PayloadIOVDetailAPIView(RetrieveAPIView):
+class PayloadIOVDetailAPIView(WriteAuthMixin, RetrieveAPIView):
     serializer_class = PayloadIOVSerializer
     queryset = PayloadIOV.objects.all()
 
 
-class PayloadIOVBulkCreationAPIView(CreateAPIView):
-    # authentication_classes = ()
-    # permission_classes = ()
+class PayloadIOVBulkCreationAPIView(WriteAuthMixin, CreateAPIView):
+    """Bulk-create PayloadIOVs from a JSON array. Skips individual validation for performance."""
     serializer_class = PayloadIOVSerializer
 
     def get_queryset(self):
@@ -482,31 +468,14 @@ class PayloadIOVBulkCreationAPIView(CreateAPIView):
                  for obj in data]
 
         PayloadIOV.objects.bulk_create(batch)
-
         return Response()
 
 
-# API to create GT. GT provided as JSON body
-# class GlobalTagCreateAPIView(CreateAPIView):
-#
-#     serializer_class = GlobalTagCreateSerializer
-#
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#
-#         #TODO name check
-#
-#         self.perform_create(serializer)
-#
-#         return Response(serializer.data)
 
+# ── Clone / Attach views ─────────────────────────────────────────────────────
 
-class GlobalTagCloneAPIView(CreateAPIView):
-    """
-    GT deep copy endpoint
-    """
-
+class GlobalTagCloneAPIView(WriteAuthMixin, CreateAPIView):
+    """Deep-copy a GlobalTag: duplicates the GT, all its PayloadLists, and their PayloadIOVs."""
     serializer_class = GlobalTagReadSerializer
 
     def get_global_tag(self):
@@ -530,7 +499,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
 
     @transaction.atomic
     def create(self, request, globalTagName, cloneName):
-
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": self.get_clone_name()}
         if not plugin.has_permission(request, target_object):
@@ -542,7 +510,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
         global_tag.id = None
         global_tag.name = self.get_clone_name()
         global_tag.status = GlobalTagStatus.objects.get(name='unlocked')
-        #self.perform_create(global_tag)
         serializer = GlobalTagCreateSerializer(instance=global_tag, data=model_to_dict(global_tag))
         serializer.is_valid(raise_exception=True)
 
@@ -551,7 +518,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
         except Exception as e:
             return Response({"detail": "GlobalTag creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "GlobalTag was not saved to DB."}, status=500)
 
@@ -561,7 +527,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
             p_list.id = p_list_id
             p_list.name = str(p_list.payload_type) + '_' + str(p_list_id)
             p_list.global_tag = global_tag
-            #self.perform_create(p_list)
 
             serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
             serializer.is_valid(raise_exception=True)
@@ -571,7 +536,6 @@ class GlobalTagCloneAPIView(CreateAPIView):
             except Exception as e:
                 return Response({"detail": "PayloadList creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # Re-validate the saved instance
             if instance.pk is None:
                 return Response({"detail": "PayloadList was not saved to DB."}, status=500)
 
@@ -580,21 +544,21 @@ class GlobalTagCloneAPIView(CreateAPIView):
                 payload.id = None
                 payload.payload_list = p_list
                 rp.append(payload)
-                
+
             try:
                 PayloadIOV.objects.bulk_create(rp)
             except Exception as e:
                 return Response({"detail": "PayloadIOV bulk creation failed."}, status=500)
-            
-        serializer = GlobalTagListSerializer(global_tag)
 
+        serializer = GlobalTagListSerializer(global_tag)
         return Response(serializer.data)
 
 
-class PayloadIOVsORMMaxListAPIView(ListAPIView):
-    """
-    Interface to take list of PayloadIOVs grouped by PayloadLists for a given GT and IOVs
-    """
+
+# ── Query views ──────────────────────────────────────────────────────────────
+
+class PayloadIOVsORMMaxListAPIView(WriteAuthMixin, ListAPIView):
+    """Get latest PayloadIOVs per PayloadList for a given GT and IOV point, using ORM MAX aggregation."""
 
     def get_queryset(self):
         gt_name = self.request.GET.get('gtName')
@@ -617,7 +581,8 @@ class PayloadIOVsORMMaxListAPIView(ListAPIView):
         return Response(serializer.data)
 
 
-class PayloadIOVsORMOrderByListAPIView(ListAPIView):
+class PayloadIOVsORMOrderByListAPIView(WriteAuthMixin, ListAPIView):
+    """Get latest PayloadIOVs per PayloadList using ORM ORDER BY + DISTINCT."""
 
     def get_queryset(self):
         gt_name = self.request.GET.get('gtName')
@@ -636,21 +601,21 @@ class PayloadIOVsORMOrderByListAPIView(ListAPIView):
 
 
 def _resolve_query(setting_name, default):
+    """Resolve a SQL query function by name from settings, falling back to default."""
     query_name = getattr(settings, setting_name, None)
     if query_name:
         return getattr(cdb_rest.queries, query_name)
     return default
-class PayloadIOVsSQLListAPIView(ListAPIView):
+
+
+class PayloadIOVsSQLListAPIView(WriteAuthMixin, ListAPIView):
+    """Get PayloadIOVs using raw SQL for performance. Distributes reads across read replicas."""
 
     def list(self, request):
-        # Get available read databases (excluding "default")
         read_dbs = [db for db in settings.DATABASES.keys() if db.startswith("read_db_")]
-
-        # If at least one read database is available, use it; otherwise, use "default"
         read_db = random.choice(read_dbs) if read_dbs else "default"
 
         query = _resolve_query('CDB_PAYLOAD_IOVS_QUERY', cdb_rest.queries.get_payload_iovs)
-
 
         with connections[read_db].cursor() as cursor:
             cursor.execute(query,
@@ -658,20 +623,16 @@ class PayloadIOVsSQLListAPIView(ListAPIView):
                             'my_minor_iov': self.request.GET.get('minorIOV'),
                             'my_gt': self.request.GET.get('gtName')})
             if self.request.GET.get('shape') == 'dict':
-                print(cursor.description)
                 columns = [col[0] for col in cursor.description]
                 result = [dict(zip(columns, row)) for row in cursor.fetchall()]
             else:
                 result = cursor.fetchall()
-            
 
         return Response(result)
 
 
-class PayloadIOVsRangesListAPIView(ListAPIView):
-    """
-    Interface to take list of PayloadIOVs ranges grouped by PayloadLists for a given GT and IOVs
-    """
+class PayloadIOVsRangesListAPIView(WriteAuthMixin, ListAPIView):
+    """Get PayloadIOVs within a given IOV range, grouped by PayloadList."""
 
     def get_queryset(self):
         gt_name = self.request.GET.get('gtName')
@@ -680,7 +641,6 @@ class PayloadIOVsRangesListAPIView(ListAPIView):
         end_major_iov = self.request.GET.get('endMajorIOV')
         end_minor_iov = self.request.GET.get('endMinorIOV')
 
-        # TODO:handle endIOVs -1 -1
         q = {'major_iov__gte': start_major_iov, 'minor_iov__gte': start_minor_iov}
         if end_major_iov != '-1':
             q.update({'major_iov__lte': end_major_iov})
@@ -690,12 +650,8 @@ class PayloadIOVsRangesListAPIView(ListAPIView):
         p_lists = PayloadList.objects.filter(global_tag__name=gt_name)
         piov_ids = []
         for pl in p_lists:
-            # piovs = PayloadIOV.objects.filter(payload_list = pl, major_iov__lte = endMajorIOV,
-            # minor_iov__lte=endMinorIOV, major_iov__gte = startMajorIOV,minor_iov__gte=startMinorIOV).values_list(
-            # 'id', flat=True)
             q.update({'payload_list': pl})
             piovs = PayloadIOV.objects.filter(**q).values_list('id', flat=True)
-
             if piovs:
                 piov_ids.extend(piovs)
 
@@ -711,19 +667,18 @@ class PayloadIOVsRangesListAPIView(ListAPIView):
         return Response(serializer.data)
 
 
-class PayloadListAttachAPIView(UpdateAPIView):
+class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
+    """Attach a PayloadList to a GlobalTag. Detaches any existing list of the same PayloadType first."""
     serializer_class = PayloadListCreateSerializer
 
     @transaction.atomic
     def put(self, request, *args, **kwargs):
-
         data = request.data
 
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
@@ -738,17 +693,13 @@ class PayloadListAttachAPIView(UpdateAPIView):
 
         gt_status = GlobalTagStatus.objects.get(id=global_tag.status_id)
         if gt_status.name == 'frozen':
-            return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # check if the PayloadList of the same type is already attached. If yes then detach
         if (PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type) and gt_status.name == 'locked'):
             return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type).update(global_tag=None)
         p_list.global_tag = global_tag
-
-        # serializer.is_valid(raise_exception=True)
-        #self.perform_update(p_list)
 
         serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
         serializer.is_valid(raise_exception=True)
@@ -758,12 +709,8 @@ class PayloadListAttachAPIView(UpdateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadList update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadList was not saved to DB."}, status=500)
-
-        # Update time for the GT
-        #self.perform_update(global_tag)
 
         serializer = GlobalTagCreateSerializer(instance=global_tag, data=model_to_dict(global_tag))
         serializer.is_valid(raise_exception=True)
@@ -773,28 +720,27 @@ class PayloadListAttachAPIView(UpdateAPIView):
         except Exception as e:
             return Response({"detail": "GlobalTag update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "GlobalTag was not updated in the DB."}, status=500)
 
         serializer = PayloadListSerializer(p_list)
-        # print(serializer.data['global_tag'])
-        # json = JSONRenderer().render(serializer.data)
         ret = serializer.data
         ret['global_tag'] = global_tag.name
         ret['payload_type'] = pl_type.name
-
-        # serializer.data['global_tag'] = gTag.name
         return Response(ret)
 
 
-class PayloadIOVAttachAPIView(UpdateAPIView):
+class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
+    """
+    Attach a PayloadIOV to a PayloadList. Handles overlap resolution:
+    - Locked GT: rejects conflicting IOVs (append-only), with special case for open-ended Online GT IOVs.
+    - Unlocked GT: splits/trims existing IOVs to accommodate the new one.
+    """
     serializer_class = PayloadIOVSerializer
 
     @transaction.atomic
     def put(self, request, *args, **kwargs):
-
-        iov_config = get_iov_config(settings.CDB_IOV_MODE) #discrete/continous
+        iov_config = get_iov_config(settings.CDB_IOV_MODE)
         offset = iov_config['next_iov_offset']
 
         data = request.data
@@ -803,7 +749,6 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
@@ -815,26 +760,20 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
             return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         is_gt_locked = False
-        # Check if PL is attached and GT is unlocked
         if p_list.global_tag:
             gt_status = GlobalTagStatus.objects.get(id=p_list.global_tag.status_id)
             if gt_status.name == 'locked':
                 is_gt_locked = True
             elif gt_status.name == 'frozen':
-                return Response({"detail": "Global Tag is  %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         list_piovs = PayloadIOV.objects.filter(payload_list=p_list)
 
-        # Check if new PayloadIOV overlaps. 
         if is_gt_locked:
-            # Check if Payload with same start IOVs already attached
-            #TODO: use comp_iov
             piovs = list_piovs.filter(major_iov=piov.major_iov, minor_iov=piov.minor_iov)
             if piovs:
                 payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                     piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
-                # err_msg = "PayloadIOV with starting IOVs %d %d already attached: %s" % \
-                # (major_iov, minor_iov, payload_url)
                 err_msg = "GT is LOCKED. You are attempting to insert IOV (major_iov,minor_iov,major_iov_end, " \
                           "minor_iov_end) (%d,%d,%d,%d). Conflicts with existing IOV %s (%d,%d,%d,%d)" % \
                           (piov.major_iov, piov.minor_iov, piov.major_iov_end, piov.minor_iov_end, payload_url,
@@ -842,19 +781,16 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                 return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Special case for Online GT - allow open IOV recover last open IOV
-            special_case = False            
-            if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:                
+            special_case = False
+            if (piov.major_iov_end == 0 or piov.major_iov_end == sys.maxsize) and piov.minor_iov_end == sys.maxsize:
                 piovs = list_piovs.all().order_by('-comb_iov')
                 if piovs:
-                    comb_iov, major_iov_end, minor_iov_end = piovs.values_list('comb_iov', 'major_iov_end', 'minor_iov_end')[0]                    
+                    comb_iov, major_iov_end, minor_iov_end = piovs.values_list('comb_iov', 'major_iov_end', 'minor_iov_end')[0]
                     if (major_iov_end == 0 or major_iov_end == sys.maxsize) and minor_iov_end == sys.maxsize:
-                        #If new open-ended IOV goes after the existing last IOV
                         if comb_iov < piov.comb_iov:
                             special_case = True
 
             if not special_case:
-                #check if new overlaps the tail of the previous
-                #TODO: use comp_iov
                 piovs = list_piovs.filter(Q(major_iov__lt=piov.major_iov) |
                                           Q(major_iov=piov.major_iov, minor_iov__lt=piov.minor_iov)) \
                     .order_by('-major_iov', '-minor_iov')
@@ -868,12 +804,10 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                                    major_iov, minor_iov, major_iov_end, minor_iov_end)
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                #check if new overlaps head of the previous
-                #TODO: use comp_iov
                 piovs = list_piovs.filter(Q(major_iov__gt=piov.major_iov) |
                                           Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)) \
                     .order_by('major_iov', 'minor_iov')
-                if piovs:                    
+                if piovs:
                     payload_url, major_iov, minor_iov, major_iov_end, minor_iov_end = \
                         piovs.values_list('payload_url', 'major_iov', 'minor_iov', 'major_iov_end', 'minor_iov_end')[0]
                     if iov_config['is_conflicting_iov_end'](piov, major_iov_end, minor_iov_end):
@@ -884,34 +818,23 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                         return Response({"detail": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         else:
-            # piovs fully recovered with inserted to be detached
-            #TODO: use comp_iov
-            piovs = list_piovs.filter(
+            list_piovs.filter(
                 Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gte=piov.minor_iov)) \
                 .filter(Q(major_iov_end__lt=piov.major_iov_end) | Q(major_iov_end=piov.major_iov_end,
-                                                                    minor_iov_end__lte=piov.minor_iov_end))\
+                                                                    minor_iov_end__lte=piov.minor_iov_end)) \
                 .update(payload_list=None)
 
-            # cut the end iovs of the previous piov
-            #TODO: use comp_iov
             piovs = list_piovs.filter(
                 Q(major_iov__lt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__lte=piov.minor_iov)).order_by(
                 '-major_iov', '-minor_iov')
             if piovs:
                 major_iov_end, minor_iov_end = piovs.values_list('major_iov_end', 'minor_iov_end')[0]
-                # Should be descrete/continous specific: (piov.major_iov <= major_iov_end) and (piov.minor_iov_end >= minor_iov)
                 if iov_config['is_conflicting_iov'](piov, major_iov_end, minor_iov_end):
-                    
-                    # Should be descrete/continous specific
                     piovs[0].major_iov_end = piov.major_iov + offset
                     piovs[0].minor_iov_end = piov.minor_iov + offset
                     piovs[0].save(update_fields=['major_iov_end', 'minor_iov_end'])
 
-                # Check if the new IOV is inserted inside the old one
                 if iov_config['is_iov_end_inside'](piov, major_iov_end, minor_iov_end):
-                    # Create 3rd IOV same URL as 1st A-B(inserted)-A
-                    
-                    # Should be descrete/continous specific
                     third_piov = piovs[0]
                     third_piov.major_iov = piov.major_iov_end
                     third_piov.minor_iov = piov.minor_iov_end
@@ -921,13 +844,6 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
                     third_piov.id = None
                     third_piov.save()
 
-                    # serializer = self.get_serializer(data=third_piov)
-                    # serializer.is_valid(raise_exception=True)
-                    # self.perform_create(third_piov)
-
-            # cut the starting iovs of the next piov
-            # Should be descrete/continous specific
-            #TODO: use comp_iov
             piovs = list_piovs.filter(
                 Q(major_iov__gt=piov.major_iov) | Q(major_iov=piov.major_iov, minor_iov__gt=piov.minor_iov)).order_by(
                 'major_iov', 'minor_iov')
@@ -942,7 +858,6 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         piov.payload_list = p_list
         piov.comb_iov = Decimal(Decimal(piov.major_iov) + Decimal(piov.minor_iov) / 10 ** 19)
 
-        #self.perform_update(piov)
         serializer = PayloadIOVSerializer(instance=piov, data=model_to_dict(piov))
         serializer.is_valid(raise_exception=True)
 
@@ -951,12 +866,9 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadIOV update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadIOV was not updated in the DB."}, status=500)
 
-        # Update time for the pL
-        #self.perform_update(p_list)
         serializer = PayloadListCreateSerializer(instance=p_list, data=model_to_dict(p_list))
         serializer.is_valid(raise_exception=True)
 
@@ -965,19 +877,19 @@ class PayloadIOVAttachAPIView(UpdateAPIView):
         except Exception as e:
             return Response({"detail": "PayloadList update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "PayloadList was not updated in the DB."}, status=500)
 
         serializer = PayloadIOVSerializer(piov)
-        # print(serializer.data['global_tag'])
-        # json = JSONRenderer().render(serializer.data)
         ret = serializer.data
-
         return Response(ret)
 
 
-class GlobalTagChangeStatusAPIView(UpdateAPIView):
+
+# ── Status change views ──────────────────────────────────────────────────────
+
+class GlobalTagChangeStatusAPIView(WriteAuthMixin, UpdateAPIView):
+    """Change a GlobalTag's status (e.g. unlocked -> locked -> frozen)."""
     serializer_class = GlobalTagCreateSerializer
 
     def get_global_tag(self):
@@ -988,14 +900,11 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         gt_status = self.kwargs.get('newStatus')
         return GlobalTagStatus.objects.get(name=gt_status)
 
-    # @transaction.atomic
     def put(self, request, *args, **kwargs):
-
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": self.kwargs.get('globalTagName')}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
 
         try:
             gt = self.get_global_tag()
@@ -1008,7 +917,6 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
             return Response({"detail": "GlobalTag Status not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         gt.status = gt_status
-        #self.perform_update(gt)
         serializer = GlobalTagCreateSerializer(instance=gt, data=model_to_dict(gt))
         serializer.is_valid(raise_exception=True)
 
@@ -1017,15 +925,17 @@ class GlobalTagChangeStatusAPIView(UpdateAPIView):
         except Exception as e:
             return Response({"detail": "GlobalTag update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Re-validate the saved instance
         if instance.pk is None:
             return Response({"detail": "GlobalTag was not updated in the DB."}, status=500)
 
-        #serializer = GlobalTagCreateSerializer(gt)
-
         return Response(serializer.data)
 
-class CDBSettingAPIView(APIView):
+
+
+# ── Settings views ───────────────────────────────────────────────────────────
+
+class CDBSettingAPIView(WriteAuthMixin, APIView):
+    """Expose CDB_* environment variables as read-only settings."""
 
     def get(self, request, name):
         if name not in settings.CDB_USER_SETTINGS:
@@ -1034,5 +944,4 @@ class CDBSettingAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         value = settings.CDB_USER_SETTINGS.get(name)
-
         return Response({name: value})
