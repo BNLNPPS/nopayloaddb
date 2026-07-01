@@ -81,7 +81,7 @@ The application is configured via environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `JWT_SECRET` | Secret key for JWT token verification | `changetosomething` |
-| `CDB_AUTH_CLASS` | Authentication class for write operations | *(empty, no auth)* |
+| `CDB_AUTH_CLASS` | Authentication class for write operations. Empty by default to allow all requests. | *(empty)* |
 | `CDB_PERMISSION_PLUGIN_CLASS` | Permission plugin class | `cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin` |
 | `CDB_IOV_MODE` | IOV mode: `continuous` or `discrete` | `continuous` |
 | `POSTGRES_DB_W` | Write database name | `dbname` |
