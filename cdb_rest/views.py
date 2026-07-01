@@ -17,7 +17,6 @@ from rest_framework.generics import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from cdb_rest.authentication import CustomJWTAuthentication
 from cdb_rest.models import (
     GlobalTag, GlobalTagStatus, PayloadList, PayloadType,
     PayloadIOV, PayloadListIdSequence
@@ -31,14 +30,16 @@ from cdb_rest.serializers import (
 )
 import cdb_rest.queries
 from .iov_comparisons import get_iov_config, compute_comb_iov
-from .utils import load_permission_plugin
+from .utils import load_permission_plugin, load_auth_class
 
 
 class WriteAuthMixin:
     """Require JWT authentication for write methods (POST/PUT/PATCH/DELETE), allow anonymous reads."""
     def get_authenticators(self):
         if self.request and self.request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
-            return [CustomJWTAuthentication()]
+            auth_class = load_auth_class()
+            if auth_class:
+                return [auth_class()]
         return []
 
 
