@@ -93,7 +93,9 @@ class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
             gt_status = GlobalTagStatus.objects.get(name=data['status'])
             data['status'] = gt_status.pk
         except KeyError:
-            return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'status' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except GlobalTagStatus.DoesNotExist:
+            return Response({"detail": "GlobalTagStatus '%s' not found." % data['status']}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -340,14 +342,16 @@ class PayloadListListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         next_id = self.get_next_id()
 
         data['id'] = int(next_id)
-        data['name'] = data['payload_type'] + '_' + str(next_id)
 
         try:
             payload_type = PayloadType.objects.get(name=data['payload_type'])
-            data['payload_type'] = payload_type.pk
         except KeyError:
-            return Response({"detail": "PayloadType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'payload_type' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadType.DoesNotExist:
+            return Response({"detail": "PayloadType '%s' not found." % data['payload_type']}, status=status.HTTP_404_NOT_FOUND)
 
+        data['name'] = payload_type.name + '_' + str(next_id)
+        data['payload_type'] = payload_type.pk
         data['global_tag'] = None
 
         serializer = self.get_serializer(data=data)
@@ -684,11 +688,15 @@ class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
         except KeyError:
-            return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'payload_list' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadList.DoesNotExist:
+            return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             global_tag = GlobalTag.objects.get(name=data['global_tag'])
         except KeyError:
-            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'global_tag' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % data['global_tag']}, status=status.HTTP_404_NOT_FOUND)
 
         pl_type = p_list.payload_type
 
@@ -754,11 +762,15 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
         except KeyError:
-            return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'payload_list' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadList.DoesNotExist:
+            return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             piov = PayloadIOV.objects.get(id=data['piov_id'])
         except KeyError:
-            return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'piov_id' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadIOV.DoesNotExist:
+            return Response({"detail": "PayloadIOV '%s' not found." % data['piov_id']}, status=status.HTTP_404_NOT_FOUND)
 
         is_gt_locked = False
         if p_list.global_tag:
@@ -909,13 +921,13 @@ class GlobalTagChangeStatusAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             gt = self.get_global_tag()
-        except KeyError:
-            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % self.kwargs.get('globalTagName')}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             gt_status = self.get_gt_status()
-        except KeyError:
-            return Response({"detail": "GlobalTag Status not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTagStatus.DoesNotExist:
+            return Response({"detail": "GlobalTagStatus '%s' not found." % self.kwargs.get('newStatus')}, status=status.HTTP_404_NOT_FOUND)
 
         gt.status = gt_status
         serializer = GlobalTagCreateSerializer(instance=gt, data=model_to_dict(gt))
