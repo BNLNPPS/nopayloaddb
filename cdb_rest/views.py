@@ -63,10 +63,22 @@ class GlobalTagByNameDetailAPIView(WriteAuthMixin, RetrieveAPIView):
 
 
 class TimeoutListAPIView(WriteAuthMixin, ListAPIView):
-    """Test endpoint that simulates a long-running request (30 min timeout)."""
+    """Test endpoint that simulates a long-running request by sleeping.
 
-    def list(self, request):
-        time.sleep(1800)
+    Accepts an optional duration in seconds (``/timeout/<seconds>``), clamped
+    to ``MAX_TIMEOUT_SECONDS`` so a caller cannot hold a worker indefinitely.
+    Without a parameter it falls back to ``DEFAULT_TIMEOUT_SECONDS``.
+    """
+
+    DEFAULT_TIMEOUT_SECONDS = 1800
+    MAX_TIMEOUT_SECONDS = 1800
+
+    def list(self, request, *args, **kwargs):
+        seconds = self.kwargs.get('seconds')
+        if seconds is None:
+            seconds = self.DEFAULT_TIMEOUT_SECONDS
+        seconds = min(seconds, self.MAX_TIMEOUT_SECONDS)
+        time.sleep(seconds)
         return Response()
 
 
