@@ -509,7 +509,10 @@ class GlobalTagCloneAPIView(WriteAuthMixin, CreateAPIView):
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
-        global_tag = self.get_global_tag()
+        try:
+            global_tag = self.get_global_tag()
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % globalTagName}, status=status.HTTP_404_NOT_FOUND)
         payload_lists = self.get_payload_lists(global_tag)
 
         global_tag.id = None
@@ -680,6 +683,10 @@ class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
     def put(self, request, *args, **kwargs):
         data = request.data
 
+        for field in ('global_tag', 'payload_list'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
@@ -687,14 +694,10 @@ class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
-        except KeyError:
-            return Response({"detail": "Field 'payload_list' is required."}, status=status.HTTP_400_BAD_REQUEST)
         except PayloadList.DoesNotExist:
             return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             global_tag = GlobalTag.objects.get(name=data['global_tag'])
-        except KeyError:
-            return Response({"detail": "Field 'global_tag' is required."}, status=status.HTTP_400_BAD_REQUEST)
         except GlobalTag.DoesNotExist:
             return Response({"detail": "GlobalTag '%s' not found." % data['global_tag']}, status=status.HTTP_404_NOT_FOUND)
 
@@ -754,6 +757,10 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         data = request.data
 
+        for field in ('global_tag', 'payload_list', 'piov_id'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
@@ -761,14 +768,12 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
-        except KeyError:
-            return Response({"detail": "Field 'payload_list' is required."}, status=status.HTTP_400_BAD_REQUEST)
         except PayloadList.DoesNotExist:
             return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             piov = PayloadIOV.objects.get(id=data['piov_id'])
-        except KeyError:
-            return Response({"detail": "Field 'piov_id' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({"detail": "Field 'piov_id' must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
         except PayloadIOV.DoesNotExist:
             return Response({"detail": "PayloadIOV '%s' not found." % data['piov_id']}, status=status.HTTP_404_NOT_FOUND)
 
