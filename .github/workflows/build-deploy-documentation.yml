@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-pages:
@@ -50,5 +50,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        # Deploy only if the branch is master
-        if: github.ref == 'refs/heads/master'
+        # Deploy only if the branch is main
+        if: github.ref == 'refs/heads/main'

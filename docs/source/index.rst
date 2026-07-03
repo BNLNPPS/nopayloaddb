@@ -243,7 +243,7 @@ See our :doc:`development` guide for details.
 
 **License**
 
-See the `LICENSE <https://github.com/BNLNPPS/nopayloaddb/blob/master/LICENSE>`_.
+See the `LICENSE <https://github.com/BNLNPPS/nopayloaddb/blob/main/LICENSE>`_.
 
 
 Acknowledgments
