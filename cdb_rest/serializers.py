@@ -71,11 +71,10 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
     payload_lists_count = serializers.SerializerMethodField()
     payload_iov_count = serializers.SerializerMethodField()
     status = serializers.SlugRelatedField(slug_field="name", read_only=True)
-    type = serializers.SlugRelatedField(slug_field="name", read_only=True)
 
     class Meta:
         model = GlobalTag
-        fields = ("id", "name", "author", "status", "type", "payload_lists_count", "payload_iov_count", "created", "updated")
+        fields = ("id", "name", "author", "status", "payload_lists_count", "payload_iov_count", "created", "updated")
 
     @staticmethod
     def get_payload_lists_count(obj):
