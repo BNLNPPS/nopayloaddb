@@ -79,10 +79,16 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_payload_lists_count(obj):
-        return obj.payload_lists.count()
+        # Prefer the value annotated by the list view (one aggregate query for all rows);
+        # fall back to a per-object count for single-object callers (e.g. clone).
+        count = getattr(obj, "payload_lists_count_annotated", None)
+        return count if count is not None else obj.payload_lists.count()
 
     @staticmethod
     def get_payload_iov_count(obj):
+        count = getattr(obj, "payload_iov_count_annotated", None)
+        if count is not None:
+            return count
         return PayloadIOV.objects.filter(payload_list__in=obj.payload_lists.all()).count()
 
 
