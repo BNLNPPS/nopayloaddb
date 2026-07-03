@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction, connections
-from django.db.models import Prefetch, Q, Max
+from django.db.models import Prefetch, Q, Max, Count
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404
 
@@ -261,11 +261,28 @@ class GlobalTagsListAPIView(WriteAuthMixin, ListAPIView):
     serializer_class = GlobalTagListSerializer
 
     def get_queryset(self):
-        return GlobalTag.objects.all()
+        # Annotate the PayloadList count in the same scan that fetches the GlobalTags
+        # (single multi-valued join, no fan-out). PayloadIOV counts are resolved
+        # separately below to avoid a per-row COUNT over the (very large) PayloadIOV table.
+        return GlobalTag.objects.select_related("status").annotate(
+            payload_lists_count_annotated=Count("payload_lists")
+        )
 
     def list(self, request):
-        queryset = self.get_queryset()
-        serializer = GlobalTagListSerializer(queryset, many=True)
+        global_tags = list(self.get_queryset())
+
+        # One grouped aggregate over PayloadIOV -> {global_tag_id: piov_count},
+        # instead of one COUNT query per GlobalTag (the source of the timeout on
+        # instances with tens of millions of PayloadIOVs, see issue #22).
+        piov_counts = dict(
+            PayloadIOV.objects
+            .values_list("payload_list__global_tag_id")
+            .annotate(count=Count("id"))
+        )
+        for gt in global_tags:
+            gt.payload_iov_count_annotated = piov_counts.get(gt.id, 0)
+
+        serializer = GlobalTagListSerializer(global_tags, many=True)
         return Response(serializer.data)
 
 
