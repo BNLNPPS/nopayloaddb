@@ -84,6 +84,11 @@ class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+
+        for field in ('name', 'status'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['name']}
         if not plugin.has_permission(request, target_object):
@@ -92,8 +97,6 @@ class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         try:
             gt_status = GlobalTagStatus.objects.get(name=data['status'])
             data['status'] = gt_status.pk
-        except KeyError:
-            return Response({"detail": "Field 'status' is required."}, status=status.HTTP_400_BAD_REQUEST)
         except GlobalTagStatus.DoesNotExist:
             return Response({"detail": "GlobalTagStatus '%s' not found." % data['status']}, status=status.HTTP_404_NOT_FOUND)
 
