@@ -105,9 +105,11 @@ List All Global Tags
           "id": 1,
           "name": "sPHENIX_ExampleGT_24",
           "author": "admin",
-          "description": "Example global tag for sPHENIX",
-          "status": 1,
-          "created": "2022-02-21T15:10:00.000000Z"
+          "status": "unlocked",
+          "payload_lists_count": 3,
+          "payload_iov_count": 128,
+          "created": "2022-02-21T15:10:00.000000Z",
+          "updated": "2022-02-21T15:10:00.000000Z"
         }
       ]
 

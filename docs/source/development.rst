@@ -918,7 +918,7 @@ Git Workflow
 
 **Branch Strategy**
 
-- ``master``: Main development branch
+- ``main``: Main development branch
 - ``feature/feature-name``: Feature development
 - ``bugfix/bug-description``: Bug fixes
 - ``hotfix/urgent-fix``: Production hotfixes
@@ -937,7 +937,7 @@ Git Workflow
 
 **Pull Request Process**
 
-1. Create feature branch from master
+1. Create feature branch from main
 2. Make changes with appropriate tests
 3. Ensure all tests pass
 4. Update documentation if needed
