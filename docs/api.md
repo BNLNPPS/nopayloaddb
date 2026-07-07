@@ -40,9 +40,10 @@ All API endpoints are prefixed with `/api/cdb_rest/`.
     comb_iov = major_iov + (minor_iov / 10 ** 19)
     ```
 
-- **Validation**:
+- **Validation** (depends on the `CDB_IOV_MODE` environment variable):
   - `major_iov_end` must be greater than or equal to `major_iov`.
-  - If `major_iov_end` equals `major_iov`, `minor_iov_end` must be greater than `minor_iov`.
+  - In `continuous` mode (default): if `major_iov_end` equals `major_iov`, `minor_iov_end` must be strictly greater than `minor_iov`.
+  - In `discrete` mode: if `major_iov_end` equals `major_iov`, `minor_iov_end` may be equal to `minor_iov` (adjacent intervals allowed).
 
 - **Error Response**:
   - **Condition**: Invalid IOV ranges.
@@ -64,9 +65,12 @@ All API endpoints are prefixed with `/api/cdb_rest/`.
     "major_iov_end": 3000,
     "minor_iov_end": 4000,
     "payload_url": "https://example.com/payload/1",
-    "checksum": "e99a18c428cb38d5f260853678922e03"
+    "checksum": "e99a18c428cb38d5f260853678922e03",
+    "payload_list": null,
+    "inserted": "2026-01-15T10:30:00.000000"
   }
   ```
+  The IOV is created detached (`payload_list: null`); attach it with `piov_attach`.
 
 ---
 
@@ -118,7 +122,7 @@ All API endpoints are prefixed with `/api/cdb_rest/`.
 
 #### HTTP Method: `PUT`
 
-- **Description**: Attaches a Payload IOV to a specified Payload List and validates for overlapping IOVs.
+- **Description**: Attaches a Payload IOV to a specified Payload List and resolves overlapping IOVs.
 
 - **Request Body**:
   ```json
@@ -128,9 +132,11 @@ All API endpoints are prefixed with `/api/cdb_rest/`.
   }
   ```
 
-- **Validation**:
-  - Checks for overlapping IOVs if the associated Global Tag (GT) is locked.
-  - Handles special cases for open-ended IOVs.
+- **Behavior** (depends on the status of the Payload List's Global Tag):
+  - **Unlocked GT**: existing IOVs that overlap the new one are split or trimmed; IOVs fully covered by the new one are detached from the list.
+  - **Locked GT**: append-only — a conflicting IOV is rejected. A new open-ended IOV starting after the last existing open-ended IOV is accepted (Online GT special case).
+  - **Frozen GT**: the request is rejected.
+  - Boundary comparisons follow the configured `CDB_IOV_MODE` (`continuous` or `discrete`).
 
 - **Error Response**:
   - **Condition**: Payload List or Payload IOV is not found.

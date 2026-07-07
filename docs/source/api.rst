@@ -32,13 +32,8 @@ All API endpoints are prefixed with ``/api/cdb_rest/``. For example:
    
       .. code-block:: text
       
-         http://nopayloaddb-nopayloaddb.apps.sdcc.bnl.gov/api/cdb_rest/
+         http://nopayloaddb.apps.sdcc.bnl.gov/api/cdb_rest/
 
-   .. tab:: Test Environment
-   
-      .. code-block:: text
-      
-         http://npdb-test-test.apps.sdcc.bnl.gov/api/cdb_rest/
 
 **Quick Test**
 
@@ -63,20 +58,37 @@ Authentication
 ==============
 
 .. note::
-   **Development Mode**: By default, authentication is disabled for development. See :doc:`deployment` for production authentication setup.
+   **Default**: The ``CDB_AUTH_CLASS`` environment variable is empty by default, which allows all requests without authentication. See :doc:`deployment` for production authentication setup.
 
-Currently, authentication is disabled in the default configuration. For production deployments, the API supports:
-
-- **JWT Token Authentication**
-- **Django REST Framework Token Authentication**
-- **Custom Authentication Backends**
-
-When authentication is enabled, include the token in your requests:
+Authentication is configured via the ``CDB_AUTH_CLASS`` environment variable. When set
+(e.g. to ``cdb_rest.authentication.CustomJWTAuthentication``), all **write** operations
+(POST, PUT, PATCH, DELETE) require a JWT bearer token. Read operations (GET) always remain
+anonymous.
 
 .. code-block:: bash
 
-   curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-        http://localhost:8000/api/cdb_rest/gt
+   export CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
+   export JWT_SECRET=your-secret-key
+
+The bundled ``CustomJWTAuthentication`` class verifies HS256-signed tokens against
+``JWT_SECRET``. When authentication is enabled, include the token in write requests:
+
+.. code-block:: bash
+
+   curl -X POST -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+        -H "Content-Type: application/json" \
+        http://localhost:8000/api/cdb_rest/gt -d '{...}'
+
+**Permission Plugins**
+
+Independently of authentication, write endpoints consult a pluggable permission system
+configured via the ``CDB_PERMISSION_PLUGIN_CLASS`` environment variable:
+
+- ``cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin`` (default) — allows all requests
+- ``cdb_rest.permissions_plugins.belle2.Belle2PermissionPlugin`` — authorizes based on JWT
+  claims (``b2cdb:admin``, ``b2cdb:createiov``, ``b2cdb:createpayload``) whose values are
+  regular expressions matched against the target global tag or payload list name
+
 
 Global Tag Endpoints
 ====================
@@ -154,10 +166,12 @@ Create Global Tag
 
    Create a new global tag.
 
+   Requires the ``admin`` role for the global tag name when a
+   permission plugin is active.
+
    :<json string name: Global tag name (required, unique)
-   :<json string author: Author/creator name (required)
-   :<json string description: Description of the global tag (required)
-   :<json int status: Status ID (required)
+   :<json string author: Author/creator name (optional)
+   :<json string status: Status **name** (required) — must be an existing GlobalTagStatus, e.g. ``unlocked``
 
    **Example Request:**
 
@@ -168,8 +182,7 @@ Create Global Tag
         -d '{
           "name": "MyNewGT_v1.0",
           "author": "researcher",
-          "description": "New global tag for calibration campaign",
-          "status": 1
+          "status": "unlocked"
         }'
 
    **Example Response:**
@@ -180,10 +193,13 @@ Create Global Tag
         "id": 2,
         "name": "MyNewGT_v1.0",
         "author": "researcher",
-        "description": "New global tag for calibration campaign",
-        "status": 1,
-        "created": "2025-01-15T10:30:00.000000Z"
+        "status": "unlocked",
+        "created": "2025-01-15T10:30:00.000000Z",
+        "updated": "2025-01-15T10:30:00.000000Z"
       }
+
+   If the referenced status does not exist, the endpoint returns
+   ``{"detail": "GlobalTagStatus not found."}`` with status ``500``.
 
 Clone Global Tag
 ~~~~~~~~~~~~~~~~
@@ -206,20 +222,26 @@ Clone Global Tag
 Change Global Tag Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:put:: /api/cdb_rest/gt_change_status/(str:name)/(int:status)
+.. http:put:: /api/cdb_rest/gt_change_status/(str:name)/(str:newStatus)
 
-   Update the status of a global tag.
+   Update the status of a global tag
 
    :param name: Global tag name
-   :param status: New status ID
+   :param newStatus: New status **name** — must be an existing GlobalTagStatus
    :type name: string
-   :type status: integer
+   :type newStatus: string
 
    **Example Request:**
 
    .. code-block:: bash
 
-      curl -X PUT http://localhost:8000/api/cdb_rest/gt_change_status/MyNewGT_v1.0/2
+      curl -X PUT http://localhost:8000/api/cdb_rest/gt_change_status/MyNewGT_v1.0/locked
+
+   **Status semantics:**
+
+   - ``unlocked`` — fully mutable; attaching overlapping IOVs splits/trims existing ones
+   - ``locked`` — append-only; attaching a conflicting IOV is rejected, deletion of the GT is rejected
+   - ``frozen`` — immutable; attaching or deleting payload IOVs and deleting the GT are rejected
 
 Delete Global Tag
 ~~~~~~~~~~~~~~~~~
@@ -239,6 +261,9 @@ Delete Global Tag
 
    .. warning::
       This operation is irreversible and will delete all associated payload lists!
+
+   .. note::
+      Global tags with status ``locked`` or ``frozen`` cannot be deleted.
 
 Global Tag Status Management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -365,12 +390,11 @@ Create Payload List
 
 .. http:post:: /api/cdb_rest/pl
 
-   Create a new payload list.
+   Create a new payload list. The name is **auto-generated** from the payload type name and
+   an internal sequence ID (e.g. ``CEMC_Calibration_42``); the list is created detached
+   (``global_tag: null``) and must be attached with ``pl_attach``.
 
-   :<json string name: Payload list name (required, unique)
-   :<json string description: Description (optional)
-   :<json int global_tag: Global tag ID (required)
-   :<json int payload_type: Payload type ID (required)
+   :<json string payload_type: Payload type **name** (required) — must be an existing PayloadType
 
    **Example Request:**
 
@@ -379,18 +403,29 @@ Create Payload List
       curl -X POST http://localhost:8000/api/cdb_rest/pl \
         -H "Content-Type: application/json" \
         -d '{
-          "name": "CEMC_Calibration_v1.0",
-          "description": "First version of CEMC calibration",
-          "global_tag": 1,
-          "payload_type": 3
+          "payload_type": "CEMC_Calibration"
         }'
+
+   **Example Response:**
+
+   .. code-block:: json
+
+      {
+        "id": 42,
+        "name": "CEMC_Calibration_42",
+        "global_tag": null,
+        "payload_type": "CEMC_Calibration",
+        "created": "2026-01-15T10:30:00.000000Z"
+      }
 
 Attach Payload List to Global Tag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/pl_attach
+.. http:put:: /api/cdb_rest/pl_attach
 
-   Attach an existing payload list to a global tag.
+   Attach an existing payload list to a global tag. If the global tag already has a payload
+   list of the same payload type, that list is detached first. Rejected if the global tag is
+   ``frozen``, or if it is ``locked`` and a list of the same type is already attached.
 
    :<json string global_tag: Global tag name (required)
    :<json string payload_list: Payload list name (required)
@@ -399,11 +434,11 @@ Attach Payload List to Global Tag
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/pl_attach \
+      curl -X PUT http://localhost:8000/api/cdb_rest/pl_attach \
         -H "Content-Type: application/json" \
         -d '{
           "global_tag": "sPHENIX_ExampleGT_24",
-          "payload_list": "CEMC_Calibration_v1.0"
+          "payload_list": "CEMC_Calibration_42"
         }'
 
 Delete Payload List
@@ -432,79 +467,86 @@ Main Payload Query Endpoint
 
 .. http:get:: /api/cdb_rest/payloadiovs/
 
-   **Primary endpoint** for querying payload IOVs. This is the main endpoint for retrieving conditions data.
+   **Primary endpoint** for querying payload IOVs. For each payload list attached to the
+   global tag, it returns the latest payload IOV whose start is at or before the requested
+   IOV point. The query runs as raw SQL for performance and is distributed randomly across
+   the configured read replica databases.
 
    :query gtName: Global tag name (required)
    :query majorIOV: Major IOV value (required)
    :query minorIOV: Minor IOV value (required)
-   :query payloadType: Filter by payload type name (optional)
+   :query shape: Set to ``dict`` to receive a list of JSON objects instead of positional rows (optional)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      # Basic query
+      # Default (positional rows)
       curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999'
 
-      # Filter by payload type
-      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&payloadType=Beam'
+      # Dictionary-shaped response
+      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
 
-   **Example Response:**
+   **Example Response (default):**
+
+   Each row contains, in order: payload type name, payload URL, checksum, size, major IOV,
+   minor IOV, major IOV end, minor IOV end, and revision (from the payload's ``extra`` field):
+
+   .. code-block:: json
+
+      [
+        ["Beam", "D0DXMagnets.dat", "e99a18c428cb38d5f260853678922e03", 1024,
+         0, 999999, 9223372036854775807, 9223372036854775807, null]
+      ]
+
+   **Example Response (shape=dict):**
 
    .. code-block:: json
 
       [
         {
-          "id": 210,
-          "name": "Beam_210",
-          "global_tag": "sPHENIX_ExampleGT_24",
-          "payload_type": "Beam",
-          "payload_iov": [
-            {
-              "id": 13425388,
-              "payload_url": "D0DXMagnets.dat",
-              "major_iov": 0,
-              "minor_iov": 999999,
-              "major_iov_end": 0,
-              "minor_iov_end": 999999,
-              "payload_list": "Beam_210",
-              "checksum": "sha256:abc123...",
-              "size": 1024,
-              "description": "Beam parameters for run period",
-              "created": "2022-02-21T15:28:20.949696Z"
-            }
-          ],
-          "created": "2022-02-21T15:17:06.481186Z"
+          "payload_type_name": "Beam",
+          "payload_url": "D0DXMagnets.dat",
+          "checksum": "e99a18c428cb38d5f260853678922e03",
+          "size": 1024,
+          "major_iov": 0,
+          "minor_iov": 999999,
+          "major_iov_end": 9223372036854775807,
+          "minor_iov_end": 9223372036854775807,
+          "revision": null
         }
       ]
 
-Alternative Query Endpoints
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. http:get:: /api/cdb_rest/payloadiovs_orm_orderby/
-
-   Alternative ORM-based query endpoint with ordering.
-
-.. http:get:: /api/cdb_rest/payloadiovs_orm_max/
-
-   Get maximum IOV values for optimization.
+   .. note::
+      The underlying SQL query is selected by the ``CDB_PAYLOAD_IOVS_QUERY`` setting in
+      ``nopayloaddb/settings.py``. The current default, ``get_payload_iovs_with_extra``,
+      includes the ``revision`` column; the plain ``get_payload_iovs`` query omits it.
 
 Create Payload IOV
 ~~~~~~~~~~~~~~~~~~
 
 .. http:post:: /api/cdb_rest/piov
 
-   Create a single payload IOV.
+   Create a single payload IOV. The IOV is created **detached** — associate it with a
+   payload list afterwards using ``piov_attach``. If the end values are omitted they default
+   to ``sys.maxsize`` (open-ended IOV). A combined IOV
+   (``comb_iov = major_iov + minor_iov / 10^19``) is computed automatically.
 
    :<json string payload_url: URL/path to payload file (required)
-   :<json string checksum: File checksum (optional, recommended)
+   :<json string checksum: File checksum (required)
    :<json int size: File size in bytes (optional)
    :<json int major_iov: Major IOV start (required)
    :<json int minor_iov: Minor IOV start (required)
-   :<json int major_iov_end: Major IOV end (optional)
-   :<json int minor_iov_end: Minor IOV end (optional)
-   :<json int payload_list: Payload list ID (required)
-   :<json string description: Description (optional)
+   :<json int major_iov_end: Major IOV end (optional, defaults to ``sys.maxsize``)
+   :<json int minor_iov_end: Minor IOV end (optional, defaults to ``sys.maxsize``)
+
+   **IOV range validation** depends on the ``CDB_IOV_MODE`` setting (see :ref:`iov-modes`):
+
+   - ``continuous`` (default): the end IOV must be strictly greater than the start IOV
+   - ``discrete``: the end IOV may be equal to the start IOV (adjacent intervals)
+
+   An invalid range returns ``{"detail": "... PayloadIOV ending IOVs should be greater or
+   equal than starting. ..."}`` with status ``500``.
 
    **Example Request:**
 
@@ -519,17 +561,37 @@ Create Payload IOV
           "major_iov": 0,
           "minor_iov": 1000,
           "major_iov_end": 0,
-          "minor_iov_end": 2000,
-          "payload_list": 1,
-          "description": "Calibration data for runs 1000-2000"
+          "minor_iov_end": 2000
         }'
+
+   **Example Response:**
+
+   .. code-block:: json
+
+      {
+        "id": 1,
+        "payload_url": "calibration_data_v1.2.root",
+        "checksum": "sha256:abcd1234ef567890...",
+        "major_iov": 0,
+        "minor_iov": 1000,
+        "comb_iov": "0.0000000000000001000",
+        "major_iov_end": 0,
+        "minor_iov_end": 2000,
+        "payload_list": null,
+        "inserted": "2026-01-15T10:30:00.000000Z"
+      }
 
 Bulk Create Payload IOVs
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. http:post:: /api/cdb_rest/bulk_piov
 
-   Create multiple payload IOVs in a single operation for improved performance.
+   Create multiple payload IOVs in a single operation for improved performance. Unlike
+   ``piov``, each entry is attached directly to a payload list (by name), end IOVs are always
+   set to ``sys.maxsize`` (open-ended), and individual range validation is skipped.
+
+   Each array element requires ``payload_url``, ``major_iov``, ``minor_iov`` and
+   ``payload_list`` (payload list **name**).
 
    **Example Request:**
 
@@ -540,33 +602,49 @@ Bulk Create Payload IOVs
         -d '[
           {
             "payload_url": "data_run1000.root",
-            "checksum": "sha256:1111...",
             "major_iov": 0,
             "minor_iov": 1000,
-            "major_iov_end": 0,
-            "minor_iov_end": 1500,
-            "payload_list": 1
+            "payload_list": "Beam_210"
           },
           {
-            "payload_url": "data_run1500.root", 
-            "checksum": "sha256:2222...",
+            "payload_url": "data_run1500.root",
             "major_iov": 0,
             "minor_iov": 1500,
-            "major_iov_end": 0,
-            "minor_iov_end": 2000,
-            "payload_list": 1
+            "payload_list": "Beam_210"
           }
         ]'
 
 Attach Payload IOV to List
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/piov_attach
+.. http:put:: /api/cdb_rest/piov_attach
 
-   Attach an existing payload IOV to a payload list.
+   Attach an existing payload IOV to a payload list, resolving overlaps with the IOVs
+   already in the list:
+
+   - If the owning global tag is ``unlocked``, existing IOVs are split or trimmed to
+     accommodate the new one (fully covered IOVs are detached from the list).
+   - If the global tag is ``locked``, the list is append-only: a conflicting IOV is rejected
+     with ``{"detail": "GT is LOCKED. ..."}`` and status ``500``. As a special case, a new
+     open-ended IOV starting after the last existing open-ended IOV is accepted (Online GT
+     workflow).
+   - If the global tag is ``frozen``, the request is rejected.
+
+   Overlap comparisons honor the configured ``CDB_IOV_MODE`` (see :ref:`iov-modes`).
 
    :<json string payload_list: Payload list name (required)
    :<json int piov_id: Payload IOV ID (required)
+
+   **Example Request:**
+
+   .. code-block:: bash
+
+      curl -X PUT http://localhost:8000/api/cdb_rest/piov_attach \
+        -H "Content-Type: application/json" \
+        -d '{
+          "payload_list": "Beam_210",
+          "piov_id": 1
+        }'
 
 Delete Payload IOV
 ~~~~~~~~~~~~~~~~~~
@@ -594,6 +672,54 @@ Delete Payload IOV
       # Delete range of IOVs
       curl -X DELETE http://localhost:8000/api/cdb_rest/deletePayloadIOV/sPHENIX_ExampleGT_24/Beam/0/1000/0/2000
 
+.. _iov-modes:
+
+IOV Modes
+=========
+
+The ``CDB_IOV_MODE`` environment variable selects how IOV boundaries are interpreted across
+the creation and attachment endpoints. Invalid values cause the application to fail at
+startup.
+
+.. list-table::
+   :widths: 15 45 40
+   :header-rows: 1
+
+   * - Mode
+     - Range validation (``piov``)
+     - Overlap handling (``piov_attach``)
+   * - ``continuous`` (default)
+     - End IOV must be strictly greater than start IOV
+     - Trimmed IOVs end exactly at the new IOV's start
+   * - ``discrete``
+     - End IOV equal to start IOV is allowed (adjacent intervals)
+     - Trimmed IOVs end one unit before the new IOV's start
+
+Settings Endpoint
+=================
+
+.. http:get:: /api/cdb_rest/user_settings/(str:name)/
+
+   Read-only access to the server's ``CDB_*`` configuration values (all environment
+   variables prefixed with ``CDB_``).
+
+   :param name: Setting name, e.g. ``CDB_IOV_MODE``
+   :type name: string
+
+   **Example Request:**
+
+   .. code-block:: bash
+
+      curl http://localhost:8000/api/cdb_rest/user_settings/CDB_IOV_MODE/
+
+   **Example Response:**
+
+   .. code-block:: json
+
+      {"CDB_IOV_MODE": "continuous"}
+
+   Unknown names return ``404`` with ``{"detail": "Setting 'NAME' not found."}``.
+
 Utility Endpoints
 =================
 
@@ -602,7 +728,8 @@ Test and Utility Functions
 
 .. http:get:: /api/cdb_rest/timeout
 
-   Test endpoint for timeout testing and system monitoring.
+   Test endpoint that simulates a long-running request (sleeps for 30 minutes before
+   responding). Useful for validating proxy/gateway timeout configuration.
 
    **Example Request:**
 
@@ -622,14 +749,6 @@ Get All Conditions for a Run
 
    # Get all conditions for run 12345
    curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345'
-
-Get Specific Detector Conditions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Get only beam conditions for a run
-   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345&payloadType=Beam'
 
 List All Available Global Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -679,16 +798,17 @@ Common HTTP Status Codes
 Error Response Format
 ~~~~~~~~~~~~~~~~~~~~~
 
-Error responses include detailed information:
+Error responses use a single ``detail`` field:
 
 .. code-block:: json
 
    {
-     "error": "Global tag not found",
-     "code": 404,
-     "details": "Global tag 'NonExistentGT' does not exist in the database",
-     "timestamp": "2025-01-15T10:30:00.000000Z"
+     "detail": "GlobalTag NonExistentGT doesn't exist"
    }
+
+.. note::
+   Most business-logic errors (missing resources, immutable global tags, IOV conflicts) are
+   currently returned with status ``500`` rather than ``404``/``409``.
 
 Validation Errors
 ~~~~~~~~~~~~~~~~~
@@ -708,10 +828,9 @@ Performance Tips
 Query Optimization
 ~~~~~~~~~~~~~~~~~~
 
-1. **Use Specific Queries**: Include payload type filters when possible
-2. **Batch Operations**: Use bulk endpoints for multiple operations
-3. **Appropriate IOV Ranges**: Use precise IOV ranges to limit result sets
-4. **Caching**: Cache frequently accessed data on the client side
+1. **Batch Operations**: Use bulk endpoints for multiple operations
+2. **Appropriate IOV Ranges**: Use precise IOV ranges to limit result sets
+3. **Caching**: Cache frequently accessed data on the client side
 
 Database Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -735,27 +854,24 @@ Python Integration
            self.base_url = base_url.rstrip('/')
            self.api_base = f"{self.base_url}/api/cdb_rest"
        
-       def get_conditions(self, gt_name, major_iov, minor_iov, payload_type=None):
+       def get_conditions(self, gt_name, major_iov, minor_iov):
            """Get conditions for a specific global tag and IOV."""
            params = {
                'gtName': gt_name,
                'majorIOV': major_iov,
-               'minorIOV': minor_iov
+               'minorIOV': minor_iov,
+               'shape': 'dict'  # get named fields instead of positional rows
            }
-           if payload_type:
-               params['payloadType'] = payload_type
-           
            response = requests.get(f"{self.api_base}/payloadiovs/", params=params)
            response.raise_for_status()
            return response.json()
        
-       def create_global_tag(self, name, author, description, status_id=1):
+       def create_global_tag(self, name, author, status='unlocked'):
            """Create a new global tag."""
            data = {
                'name': name,
                'author': author,
-               'description': description,
-               'status': status_id
+               'status': status  # status name, must exist in /gtstatus
            }
            response = requests.post(f"{self.api_base}/gt", json=data)
            response.raise_for_status()
@@ -781,8 +897,8 @@ Shell Script Integration
        local gt_name=$1
        local run_number=$2
        
-       curl -s "${API_BASE}/payloadiovs/?gtName=${gt_name}&majorIOV=0&minorIOV=${run_number}" \
-           | jq -r '.[] | "\(.payload_type): \(.payload_iov[0].payload_url)"'
+       curl -s "${API_BASE}/payloadiovs/?gtName=${gt_name}&majorIOV=0&minorIOV=${run_number}&shape=dict" \
+           | jq -r '.[] | "\(.payload_type_name): \(.payload_url)"'
    }
    
    # Function to list available global tags

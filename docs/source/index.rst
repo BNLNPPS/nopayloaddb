@@ -38,7 +38,8 @@ Key Features
    - Kubernetes and OpenShift deployment templates
 
 **Security & Performance**
-   - JWT and token-based authentication
+   - Configurable JWT authentication for write operations (``CDB_AUTH_CLASS``)
+   - Pluggable permission system (``CDB_PERMISSION_PLUGIN_CLASS``)
    - Bulk operations for efficient data loading
    - Comprehensive logging and monitoring (in development)
 
@@ -199,10 +200,10 @@ Here are some common API endpoints to get you started:
 
 .. code-block:: bash
 
-   # Create new global tag
+   # Create new global tag (status is the name of an existing GlobalTagStatus)
    curl -X POST http://localhost:8000/api/cdb_rest/gt \
      -H "Content-Type: application/json" \
-     -d '{"name": "MyNewGT", "author": "username", "description": "New global tag"}'
+     -d '{"name": "MyNewGT", "author": "username", "status": "unlocked"}'
 
 For complete API documentation, see :doc:`api`.
 

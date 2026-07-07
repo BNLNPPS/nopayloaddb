@@ -45,7 +45,7 @@ Create a ``.env`` file:
 
 .. code-block:: bash
 
-   export SECRET_KEY='your-development-secret-key-here'
+   export JWT_SECRET='your-development-secret-key-here'
    export DJANGO_LOGPATH='/tmp'
    
    # Database configuration
@@ -82,7 +82,7 @@ For a more consistent development environment:
    
    # Configure .env for Docker
    cat > .env << EOF
-   SECRET_KEY='docker-dev-secret-key'
+   JWT_SECRET='docker-dev-secret-key'
    DJANGO_LOGPATH='/npdb/logs'
    
    POSTGRES_DB_W=nopayloaddb
@@ -652,8 +652,14 @@ Project Layout
    │   ├── views.py          # API views
    │   ├── serializers.py    # DRF serializers
    │   ├── urls.py           # API URL routing
-   │   ├── queries.py        # Custom queries
-   │   ├── authentication.py # Auth logic
+   │   ├── queries.py        # Raw SQL queries for payload IOV lookups
+   │   ├── iov_comparisons.py # IOV mode strategies (continuous/discrete)
+   │   ├── authentication.py # JWT authentication class
+   │   ├── utils.py          # Auth/permission class loaders
+   │   ├── permissions_plugins/ # Pluggable write-permission system
+   │   │   ├── base.py       # BasePermissionPlugin ABC
+   │   │   ├── dummy.py      # Allow-all plugin (default)
+   │   │   └── belle2.py     # Belle II JWT-claims-based plugin
    │   └── migrations/       # Database migrations
    ├── docs/                 # Documentation
    ├── requirements.txt      # Python dependencies

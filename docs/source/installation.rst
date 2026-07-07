@@ -37,7 +37,7 @@ The fastest way to get Nopayloaddb running:
 
       cat > .env << 'EOF'
       # Basic configuration for development
-      SECRET_KEY='development-secret-key-change-in-production'
+      JWT_SECRET='development-secret-key-change-in-production'
       DJANGO_LOGPATH='/tmp'
       
       # Database configuration
@@ -213,8 +213,8 @@ Installation Steps
    .. code-block:: bash
 
       cat > .env << 'EOF'
-      # Security
-      SECRET_KEY='your-very-secure-secret-key-here'
+      # Security (used as the Django SECRET_KEY and to verify JWT tokens)
+      JWT_SECRET='your-very-secure-secret-key-here'
       
       # Logging
       DJANGO_LOGPATH='/tmp'
@@ -241,7 +241,7 @@ Installation Steps
       EOF
 
    .. warning::
-      **Generate a secure SECRET_KEY**: You can generate one using:
+      **Generate a secure JWT_SECRET**: You can generate one using:
       
       .. code-block:: bash
       
@@ -322,10 +322,9 @@ Setup Steps
 
       cat > .env << 'EOF'
       # Django Configuration
-      SECRET_KEY='your-docker-development-secret-key'
+      JWT_SECRET='your-docker-development-secret-key'
       DJANGO_LOGPATH='/npdb/logs'
-      DEBUG=True
-      
+
       # Database Configuration
       POSTGRES_DB_W=nopayloaddb
       POSTGRES_USER_W=npdb
@@ -407,15 +406,21 @@ Core Settings
    * - Variable
      - Description
      - Default
-   * - ``SECRET_KEY``
-     - Django secret key (**required**)
+   * - ``JWT_SECRET``
+     - Django secret key, also used to verify JWT tokens (**required**)
      - ``'changetosomething'`` (insecure)
-   * - ``DEBUG``
-     - Enable Django debug mode
-     - ``False``
    * - ``DJANGO_LOGPATH``
      - Path for Django log files
      - ``'/var/log'``
+   * - ``CDB_AUTH_CLASS``
+     - Authentication class for write operations, e.g. ``cdb_rest.authentication.CustomJWTAuthentication``. Empty allows all requests.
+     - *(empty)*
+   * - ``CDB_PERMISSION_PLUGIN_CLASS``
+     - Permission plugin class for write operations
+     - ``cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin``
+   * - ``CDB_IOV_MODE``
+     - IOV mode: ``continuous`` or ``discrete``
+     - ``continuous``
 
 Database Configuration
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -463,7 +468,8 @@ Security Checklist
 ~~~~~~~~~~~~~~~~~~~
 
 - **Never use DEBUG=True in production**
-- **Use a secure, randomly generated SECRET_KEY**
+- **Use a secure, randomly generated JWT_SECRET**
+- **Enable authentication by setting CDB_AUTH_CLASS**
 - **Configure HTTPS/TLS encryption**
 - **Use separate database users for read/write operations**
 - **Set proper file permissions on configuration files**
@@ -475,9 +481,11 @@ Production Configuration Example
 .. code-block:: bash
 
    # Production environment variables (store securely)
-   SECRET_KEY='your-production-secret-key-50-characters-long'
-   DEBUG=False
+   JWT_SECRET='your-production-secret-key-50-characters-long'
    DJANGO_LOGPATH='/var/log/nopayloaddb'
+
+   # Require JWT authentication for write operations
+   CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
    
    # Production database (write)
    POSTGRES_DB_W=nopayloaddb_prod

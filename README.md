@@ -4,7 +4,7 @@ An implementation of the Conditions Database (CDB) for the [HEP Software Foundat
 
 ## Features
 
-- Global tag management with status transitions (unlocked, locked, published)
+- Global tag management with status transitions (unlocked, locked, frozen)
 - Payload type and payload list associations
 - IOV-based payload versioning (continuous and discrete modes)
 - Configurable JWT authentication for write operations
@@ -22,7 +22,7 @@ git clone --depth 1 --branch v5.0.0 https://github.com/BNLNPPS/nopayloaddb /nopa
 ### List all global tags
 
 ```shell
-curl '<BASE_URL>/api/cdb_rest/globaltags/'
+curl '<BASE_URL>/api/cdb_rest/globalTags'
 ```
 
 ### Get payload IOVs for a global tag
@@ -31,19 +31,23 @@ curl '<BASE_URL>/api/cdb_rest/globaltags/'
 curl '<BASE_URL>/api/cdb_rest/payloadiovs/?gtName=ExampleGT&majorIOV=0&minorIOV=999999'
 ```
 
-### Create a global tag (requires JWT authentication)
+Append `&shape=dict` to receive named fields instead of positional rows.
+
+### Create a global tag (requires JWT authentication when `CDB_AUTH_CLASS` is set)
 
 ```shell
-curl -X POST '<BASE_URL>/api/cdb_rest/globaltags/' \
+curl -X POST '<BASE_URL>/api/cdb_rest/gt' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <JWT_TOKEN>' \
-  -d '{"name": "MyNewGlobalTag"}'
+  -d '{"name": "MyNewGlobalTag", "status": "unlocked"}'
 ```
 
 ### Check CDB configuration
 
+Any `CDB_*` environment variable set on the server can be read back:
+
 ```shell
-curl '<BASE_URL>/api/cdb_rest/settings/<SETTING_NAME>'
+curl '<BASE_URL>/api/cdb_rest/user_settings/<SETTING_NAME>/'
 ```
 
 ## How to Start the Services

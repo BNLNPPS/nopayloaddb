@@ -18,10 +18,16 @@ Never use default values in production:
 .. code-block:: bash
 
    # Required production settings
-   export SECRET_KEY='your-very-secure-secret-key-here'
-   export DEBUG=False
+   export JWT_SECRET='your-very-secure-secret-key-here'
    export DJANGO_LOGPATH='/var/log/nopayloaddb'
-   
+
+   # Enable JWT authentication for write operations
+   export CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
+
+   # Optional: permission plugin and IOV mode
+   export CDB_PERMISSION_PLUGIN_CLASS=cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin
+   export CDB_IOV_MODE=continuous
+
    # Database credentials
    export POSTGRES_DB_W=nopayloaddb_prod
    export POSTGRES_USER_W=npdb_prod
@@ -29,29 +35,25 @@ Never use default values in production:
    export POSTGRES_HOST_W=db.example.com
    export POSTGRES_PORT_W=5432
 
-**Django Settings**
+**Authentication and Permissions**
 
-Ensure production settings in ``nopayloaddb/settings.py``:
+Authentication is configured through environment variables rather than by editing
+``nopayloaddb/settings.py``:
 
-.. code-block:: python
+.. code-block:: bash
 
-   # Security settings
-   DEBUG = False
-   ALLOWED_HOSTS = ['your-domain.com', 'api.example.com']
-   
-   # Use secure cookies
-   SESSION_COOKIE_SECURE = True
-   CSRF_COOKIE_SECURE = True
-   
-   # Enable authentication if required
-   REST_FRAMEWORK = {
-       'DEFAULT_AUTHENTICATION_CLASSES': [
-           'rest_framework.authentication.TokenAuthentication',
-       ],
-       'DEFAULT_PERMISSION_CLASSES': [
-           'rest_framework.permissions.IsAuthenticated',
-       ],
-   }
+   # Require JWT bearer tokens (HS256, verified against JWT_SECRET) for all
+   # write operations (POST/PUT/PATCH/DELETE); reads remain anonymous.
+   export CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
+   export JWT_SECRET='your-very-secure-secret-key-here'
+
+   # Authorize writes with a permission plugin. The default DummyPermissionPlugin
+   # allows everything; Belle2PermissionPlugin authorizes based on JWT claims.
+   export CDB_PERMISSION_PLUGIN_CLASS=cdb_rest.permissions_plugins.belle2.Belle2PermissionPlugin
+
+.. warning::
+   With the default (empty) ``CDB_AUTH_CLASS``, all requests — including writes — are
+   accepted without authentication. Always set it in production.
 
 **HTTPS/TLS Configuration**
 
@@ -128,8 +130,8 @@ Docker Production Setup
          db:
            condition: service_healthy
        environment:
-         - SECRET_KEY=${SECRET_KEY}
-         - DEBUG=False
+         - JWT_SECRET=${JWT_SECRET}
+         - CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
          - POSTGRES_HOST_W=db
        volumes:
          - static_files:/app/static
@@ -197,7 +199,7 @@ Kubernetes Deployment
      namespace: nopayloaddb
    type: Opaque
    data:
-     SECRET_KEY: <base64-encoded-secret>
+     JWT_SECRET: <base64-encoded-secret>
      POSTGRES_USER_W: <base64-encoded-username>
      POSTGRES_PASSWORD_W: <base64-encoded-password>
 
@@ -429,7 +431,7 @@ OpenShift Deployment
      -p DATABASE_NAME=nopayloaddb \
      -p DATABASE_USER=npdb \
      -p DATABASE_PASSWORD=secure-password \
-     -p SECRET_KEY=your-secure-secret-key
+     -p SECRET_KEY=your-secure-secret-key  # exposed to the app as JWT_SECRET
 
 **Custom OpenShift Configuration**
 
@@ -458,7 +460,7 @@ OpenShift Deployment
            - name: nopayloaddb
              image: ghcr.io/plexoos/npdb:latest
              env:
-             - name: SECRET_KEY
+             - name: JWT_SECRET
                valueFrom:
                  secretKeyRef:
                    name: nopayloaddb-secrets
