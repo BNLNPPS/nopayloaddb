@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-pages:
@@ -34,9 +34,9 @@ jobs:
         with:
           path: docs/build/html/
 
-  # Deploy the documentation, only on pushes to master (never on pull requests)
+  # Deploy the documentation, only on pushes to main (never on pull requests)
   deploy-page:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: build-pages
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
