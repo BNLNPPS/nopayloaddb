@@ -4,7 +4,7 @@
 API Documentation
 =================
 
-The Nopayloaddb project provides a comprehensive RESTful API for managing payloads, global tags, payload types, and associated conditions database operations. The API enables clients to perform CRUD operations on these resources with full support for complex queries and bulk operations.
+Nopayloaddb provides a RESTful API for managing global tags, payload types, payload lists, and payload IOVs. This page documents every endpoint with example requests and responses.
 
 .. contents:: Table of Contents
    :local:
@@ -842,114 +842,7 @@ Database Considerations
 Integration Examples
 ====================
 
-Python Integration
-~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   import requests
-   
-   class NopayloaddbClient:
-       def __init__(self, base_url):
-           self.base_url = base_url.rstrip('/')
-           self.api_base = f"{self.base_url}/api/cdb_rest"
-       
-       def get_conditions(self, gt_name, major_iov, minor_iov):
-           """Get conditions for a specific global tag and IOV."""
-           params = {
-               'gtName': gt_name,
-               'majorIOV': major_iov,
-               'minorIOV': minor_iov,
-               'shape': 'dict'  # get named fields instead of positional rows
-           }
-           response = requests.get(f"{self.api_base}/payloadiovs/", params=params)
-           response.raise_for_status()
-           return response.json()
-       
-       def create_global_tag(self, name, author, status='unlocked'):
-           """Create a new global tag."""
-           data = {
-               'name': name,
-               'author': author,
-               'status': status  # status name, must exist in /gtstatus
-           }
-           response = requests.post(f"{self.api_base}/gt", json=data)
-           response.raise_for_status()
-           return response.json()
-   
-   # Usage example
-   client = NopayloaddbClient('http://localhost:8000')
-   conditions = client.get_conditions('sPHENIX_ExampleGT_24', 0, 999999)
-   print(f"Found conditions for {len(conditions)} payload types")
-
-Shell Script Integration
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   #!/bin/bash
-   
-   API_BASE="http://localhost:8000/api/cdb_rest"
-   GT_NAME="Production_GT_v2.1"
-   
-   # Function to get conditions for a run
-   get_conditions() {
-       local gt_name=$1
-       local run_number=$2
-       
-       curl -s "${API_BASE}/payloadiovs/?gtName=${gt_name}&majorIOV=0&minorIOV=${run_number}&shape=dict" \
-           | jq -r '.[] | "\(.payload_type_name): \(.payload_url)"'
-   }
-   
-   # Function to list available global tags
-   list_global_tags() {
-       curl -s "${API_BASE}/globalTags" | jq -r '.[].name'
-   }
-   
-   # Usage
-   echo "Available Global Tags:"
-   list_global_tags
-   
-   echo -e "\nConditions for run 12345:"
-   get_conditions "$GT_NAME" 12345
-
-API Versioning
-==============
-
-.. note::
-   **Current Version**: The API is currently at version 1.0. Future versions will maintain backward compatibility where possible.
-
-The API follows semantic versioning principles:
-
-- **Major versions** (e.g., 1.0 → 2.0): Breaking changes
-- **Minor versions** (e.g., 1.0 → 1.1): New features, backward compatible  
-- **Patch versions** (e.g., 1.0.0 → 1.0.1): Bug fixes, backward compatible
-
-Future versions will be accessible via URL versioning:
-
-.. code-block:: text
-
-   /api/v2/cdb_rest/  # Future version 2.0
-
-Rate Limiting
-=============
-
-.. note::
-   **Development**: Rate limiting is not enforced in development mode.
-
-Production deployments may implement rate limiting:
-
-- **Per-user limits**: Authenticated users may have different limits
-- **Per-IP limits**: Anonymous requests may be limited by IP address
-- **Per-endpoint limits**: Some endpoints may have specific limits
-
-Rate limit information is included in response headers:
-
-.. code-block:: text
-
-   X-RateLimit-Limit: 1000
-   X-RateLimit-Remaining: 999
-   X-RateLimit-Reset: 1642694400
+Python and shell client examples live in the :doc:`usage` guide.
 
 Next Steps
 ==========

@@ -166,6 +166,7 @@ This documentation is organized into several sections:
 
    deployment
    development
+   kubernetes_dev
 
 .. toctree::
    :maxdepth: 1

@@ -66,11 +66,15 @@ The fastest way to get Nopayloaddb running:
 
 That's it! You now have Nopayloaddb running with a PostgreSQL database.
 
-To stop the application:
+**Managing the environment**
 
 .. code-block:: bash
 
-   docker-compose down
+   docker-compose logs -f webapp                          # follow application logs
+   docker-compose exec webapp python manage.py shell      # Django shell in the container
+   docker-compose exec webapp python manage.py migrate    # run migrations if needed
+   docker-compose down                                    # stop services
+   rm -fr db/data                                         # reset the database (removes all data)
 
 .. _manual-installation:
 
@@ -271,126 +275,6 @@ Installation Steps
 
    Access the application at http://127.0.0.1:8000/
 
-Docker Compose Setup (Detailed)
---------------------------------
-
-For a more robust development environment with persistent data and easier management.
-
-Prerequisites
-~~~~~~~~~~~~~
-
-**Install Docker:**
-
-.. tabs::
-
-   .. tab:: Linux
-   
-      .. code-block:: bash
-      
-         # Ubuntu/Debian
-         curl -fsSL https://get.docker.com -o get-docker.sh
-         sudo sh get-docker.sh
-         sudo usermod -aG docker $USER
-         
-         # Install Docker Compose
-         sudo curl -L "https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-         sudo chmod +x /usr/local/bin/docker-compose
-
-   .. tab:: macOS
-   
-      Download and install Docker Desktop from https://www.docker.com/products/docker-desktop/
-
-   .. tab:: Windows
-   
-      Download and install Docker Desktop from https://www.docker.com/products/docker-desktop/
-
-Setup Steps
-~~~~~~~~~~~
-
-1. **Clone Repository**
-
-   .. code-block:: bash
-
-      git clone https://github.com/BNLNPPS/nopayloaddb.git
-      cd nopayloaddb
-
-2. **Configure Environment Variables**
-
-   Create a comprehensive `.env` file:
-
-   .. code-block:: bash
-
-      cat > .env << 'EOF'
-      # Django Configuration
-      JWT_SECRET='your-docker-development-secret-key'
-      DJANGO_LOGPATH='/npdb/logs'
-
-      # Database Configuration
-      POSTGRES_DB_W=nopayloaddb
-      POSTGRES_USER_W=npdb
-      POSTGRES_PASSWORD_W=secure_password_123
-      POSTGRES_HOST_W=db
-      POSTGRES_PORT_W=5432
-      
-      # Read replicas (using same DB for development)
-      POSTGRES_DB_R1=nopayloaddb
-      POSTGRES_USER_R1=npdb
-      POSTGRES_PASSWORD_R1=secure_password_123
-      POSTGRES_HOST_R1=db
-      POSTGRES_PORT_R1=5432
-      
-      POSTGRES_DB_R2=nopayloaddb
-      POSTGRES_USER_R2=npdb
-      POSTGRES_PASSWORD_R2=secure_password_123
-      POSTGRES_HOST_R2=db
-      POSTGRES_PORT_R2=5432
-      EOF
-
-3. **Start Services**
-
-   .. code-block:: bash
-
-      # Build and start in foreground
-      docker-compose up --build
-      
-      # Or start in background (detached mode)
-      docker-compose up --build -d
-
-4. **Verify Installation**
-
-   .. code-block:: bash
-
-      # Check running services
-      docker-compose ps
-      
-      # Check logs
-      docker-compose logs webapp
-      
-      # Test API endpoint
-      curl http://localhost:8000/api/cdb_rest/gt
-
-5. **Managing the Development Environment**
-
-   .. code-block:: bash
-
-      # View logs in real-time
-      docker-compose logs -f webapp
-      
-      # Execute commands in the webapp container
-      docker-compose exec webapp python manage.py shell
-      
-      # Create a superuser
-      docker-compose exec webapp python manage.py createsuperuser
-      
-      # Run migrations (if needed)
-      docker-compose exec webapp python manage.py migrate
-      
-      # Stop services
-      docker-compose down
-      
-      # Remove all data (caution!)
-      docker-compose down -v
-
 Environment Variables Reference
 -------------------------------
 
@@ -459,76 +343,15 @@ Replace ``_W`` with ``_R1`` or ``_R2`` for read replica configuration.
 Production Deployment
 ---------------------
 
-.. warning::
-   **This section is for production deployments only.** Do not use these settings for development.
+Production setup is covered in :doc:`deployment`. In summary:
 
-For production environments, additional security and performance considerations apply:
-
-Security Checklist
-~~~~~~~~~~~~~~~~~~~
-
-- **Never use DEBUG=True in production**
-- **Use a secure, randomly generated JWT_SECRET**
-- **Enable authentication by setting CDB_AUTH_CLASS**
-- **Configure HTTPS/TLS encryption**
-- **Use separate database users for read/write operations**
-- **Set proper file permissions on configuration files**
-- **Use environment-specific secret management**
-
-Production Configuration Example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Production environment variables (store securely)
-   JWT_SECRET='your-production-secret-key-50-characters-long'
-   DJANGO_LOGPATH='/var/log/nopayloaddb'
-
-   # Require JWT authentication for write operations
-   CDB_AUTH_CLASS=cdb_rest.authentication.CustomJWTAuthentication
-   
-   # Production database (write)
-   POSTGRES_DB_W=nopayloaddb_prod
-   POSTGRES_USER_W=npdb_write
-   POSTGRES_PASSWORD_W='very-secure-write-password'
-   POSTGRES_HOST_W=db-primary.example.com
-   POSTGRES_PORT_W=5432
-   
-   # Production read replicas
-   POSTGRES_DB_R1=nopayloaddb_prod
-   POSTGRES_USER_R1=npdb_read
-   POSTGRES_PASSWORD_R1='very-secure-read-password'
-   POSTGRES_HOST_R1=db-replica1.example.com
-   POSTGRES_PORT_R1=5432
-
-**Helm Charts for Production (Recommended)**
-
-For production deployments on Kubernetes/OpenShift, we recommend using the official Helm charts:
-
-.. code-block:: bash
-
-   # Clone the official Helm charts
-   git clone https://github.com/BNLNPPS/nopayloaddb-charts.git
-   cd nopayloaddb-charts
-   
-   # Choose your experiment configuration:
-   # For sPHENIX:
-   cp your-values.yaml npdbchart_sphenix/values.yaml
-   helm install sphenix-npdb npdbchart_sphenix/
-   
-   # For Belle2:
-   cp your-values.yaml npdbchart_belle2_java/values.yaml  
-   helm install belle2-npdb npdbchart_belle2_java/
-
-The Helm charts include:
-
-- Pre-configured security settings
-- Database setup and migration jobs
-- Monitoring and health checks
-- Experiment-specific configurations
-- Load balancing and scaling options
-
-For detailed production deployment instructions, see :doc:`deployment`.
+- Use a secure, randomly generated ``JWT_SECRET`` and enable authentication with
+  ``CDB_AUTH_CLASS``.
+- Use separate database users for write (``POSTGRES_*_W``) and read (``POSTGRES_*_R1/R2``)
+  operations.
+- Serve the application behind a TLS-terminating reverse proxy.
+- For Kubernetes/OpenShift, use the official Helm charts:
+  https://github.com/BNLNPPS/nopayloaddb-charts
 
 Troubleshooting
 ---------------
@@ -614,29 +437,10 @@ Set ``DJANGO_LOGPATH`` to a writable directory:
 Getting Help
 ~~~~~~~~~~~~
 
-If you encounter issues not covered here:
-
-1. Check the `GitHub Issues <https://github.com/BNLNPPS/nopayloaddb/issues>`_
-2. Review the Django logs for detailed error messages
-3. Ensure all prerequisites are correctly installed
-4. Try the Docker setup if manual installation fails
-
-**Useful Commands for Debugging:**
-
-.. code-block:: bash
-
-   # Check Python environment
-   python --version
-   pip list
-   
-   # Check PostgreSQL connection
-   psql -h localhost -U your_user -d your_database -c "SELECT 1;"
-   
-   # Check Django configuration
-   python manage.py check
-   
-   # View detailed Django errors
-   python manage.py runserver --verbosity=2
+If you encounter issues not covered here, run ``python manage.py check`` to validate the
+configuration, review the Django logs, and check the
+`GitHub Issues <https://github.com/BNLNPPS/nopayloaddb/issues>`_. The Docker setup is a
+good fallback when the manual installation misbehaves.
 
 Next Steps
 ----------
