@@ -84,6 +84,11 @@ class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+
+        for field in ('name', 'status'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['name']}
         if not plugin.has_permission(request, target_object):
@@ -92,8 +97,8 @@ class GlobalTagListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         try:
             gt_status = GlobalTagStatus.objects.get(name=data['status'])
             data['status'] = gt_status.pk
-        except KeyError:
-            return Response({"detail": "GlobalTagStatus not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTagStatus.DoesNotExist:
+            return Response({"detail": "GlobalTagStatus '%s' not found." % data['status']}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -130,11 +135,11 @@ class GlobalTagDeleteAPIView(WriteAuthMixin, DestroyAPIView):
 
         gt = self.get_gtag()
         if not gt:
-            return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "GlobalTag %s doesn't exist" % self.kwargs['globalTagName']}, status=status.HTTP_404_NOT_FOUND)
 
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
         if gt_status.name in ['locked', 'frozen']:
-            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(gt)
         if not ret:
             ret = {"detail": "Global tag %s deleted." % gt.name}
@@ -163,7 +168,7 @@ class PayloadIOVDeleteAPIView(WriteAuthMixin, DestroyAPIView):
                 major_iov_end=self.kwargs['major_iov_end'],
                 minor_iov_end=self.kwargs['minor_iov_end']
             )
-        except:
+        except PayloadIOV.DoesNotExist:
             return None
 
     def destroy(self, request, *args, **kwargs):
@@ -174,13 +179,13 @@ class PayloadIOVDeleteAPIView(WriteAuthMixin, DestroyAPIView):
 
         piov = self.get_object()
         if not piov:
-            return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadIOV with given parameters doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
 
         gt = GlobalTag.objects.get(name=self.kwargs['globalTagName'])
         gt_status = GlobalTagStatus.objects.get(id=gt.status_id)
 
         if gt_status.name == 'frozen':
-            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(piov)
         if not ret:
             ret = {"detail": "PayloadIOV %s deleted." % piov.payload_url}
@@ -210,10 +215,10 @@ class PayloadTypeDeleteAPIView(WriteAuthMixin, DestroyAPIView):
         ret = {}
         ptype = self.get_ptype()
         if not ptype:
-            return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadType %s doesn't exist" % self.kwargs['payloadTypeName']}, status=status.HTTP_404_NOT_FOUND)
         plists = list(self.get_plists(ptype))
         if plists:
-            return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadType is used by %d PayloadLists" % len(plists)}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(ptype)
         if not ret:
             ret = {"detail": "Payload Type %s deleted." % ptype.name}
@@ -243,10 +248,10 @@ class PayloadListDeleteAPIView(WriteAuthMixin, DestroyAPIView):
         ret = {}
         plist = self.get_plist()
         if not plist:
-            return Response({"detail": "PayloadList %s doesn't exist" % self.kwargs['payloadListName']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadList %s doesn't exist" % self.kwargs['payloadListName']}, status=status.HTTP_404_NOT_FOUND)
         piovs = list(self.get_piovs(plist))
         if piovs:
-            return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "PayloadList contains %d PayloadIOVs" % len(piovs)}, status=status.HTTP_409_CONFLICT)
         ret = self.perform_destroy(plist)
         if not ret:
             ret = {"detail": "Payload Type %s deleted." % plist.name}
@@ -340,14 +345,16 @@ class PayloadListListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         next_id = self.get_next_id()
 
         data['id'] = int(next_id)
-        data['name'] = data['payload_type'] + '_' + str(next_id)
 
         try:
             payload_type = PayloadType.objects.get(name=data['payload_type'])
-            data['payload_type'] = payload_type.pk
         except KeyError:
-            return Response({"detail": "PayloadType not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Field 'payload_type' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadType.DoesNotExist:
+            return Response({"detail": "PayloadType '%s' not found." % data['payload_type']}, status=status.HTTP_404_NOT_FOUND)
 
+        data['name'] = payload_type.name + '_' + str(next_id)
+        data['payload_type'] = payload_type.pk
         data['global_tag'] = None
 
         serializer = self.get_serializer(data=data)
@@ -505,7 +512,10 @@ class GlobalTagCloneAPIView(WriteAuthMixin, CreateAPIView):
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
-        global_tag = self.get_global_tag()
+        try:
+            global_tag = self.get_global_tag()
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % globalTagName}, status=status.HTTP_404_NOT_FOUND)
         payload_lists = self.get_payload_lists(global_tag)
 
         global_tag.id = None
@@ -676,6 +686,10 @@ class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
     def put(self, request, *args, **kwargs):
         data = request.data
 
+        for field in ('global_tag', 'payload_list'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "admin", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
@@ -683,21 +697,21 @@ class PayloadListAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
-        except KeyError:
-            return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except PayloadList.DoesNotExist:
+            return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             global_tag = GlobalTag.objects.get(name=data['global_tag'])
-        except KeyError:
-            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % data['global_tag']}, status=status.HTTP_404_NOT_FOUND)
 
         pl_type = p_list.payload_type
 
         gt_status = GlobalTagStatus.objects.get(id=global_tag.status_id)
         if gt_status.name == 'frozen':
-            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_409_CONFLICT)
 
         if (PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type) and gt_status.name == 'locked'):
-            return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Payload List of type %s already attached and Global Tag is locked." % pl_type}, status=status.HTTP_409_CONFLICT)
 
         PayloadList.objects.filter(global_tag=global_tag, payload_type=pl_type).update(global_tag=None)
         p_list.global_tag = global_tag
@@ -746,6 +760,10 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         data = request.data
 
+        for field in ('global_tag', 'payload_list', 'piov_id'):
+            if field not in data:
+                return Response({"detail": "Field '%s' is required." % field}, status=status.HTTP_400_BAD_REQUEST)
+
         plugin = load_permission_plugin()
         target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
         if not plugin.has_permission(request, target_object):
@@ -753,12 +771,14 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
-        except KeyError:
-            return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except PayloadList.DoesNotExist:
+            return Response({"detail": "PayloadList '%s' not found." % data['payload_list']}, status=status.HTTP_404_NOT_FOUND)
         try:
             piov = PayloadIOV.objects.get(id=data['piov_id'])
-        except KeyError:
-            return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except (ValueError, TypeError):
+            return Response({"detail": "Field 'piov_id' must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+        except PayloadIOV.DoesNotExist:
+            return Response({"detail": "PayloadIOV '%s' not found." % data['piov_id']}, status=status.HTTP_404_NOT_FOUND)
 
         is_gt_locked = False
         if p_list.global_tag:
@@ -766,7 +786,7 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
             if gt_status.name == 'locked':
                 is_gt_locked = True
             elif gt_status.name == 'frozen':
-                return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"detail": "Global Tag is %s." % gt_status.name}, status=status.HTTP_409_CONFLICT)
 
         list_piovs = PayloadIOV.objects.filter(payload_list=p_list)
 
@@ -909,13 +929,13 @@ class GlobalTagChangeStatusAPIView(WriteAuthMixin, UpdateAPIView):
 
         try:
             gt = self.get_global_tag()
-        except KeyError:
-            return Response({"detail": "GlobalTag not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTag.DoesNotExist:
+            return Response({"detail": "GlobalTag '%s' not found." % self.kwargs.get('globalTagName')}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             gt_status = self.get_gt_status()
-        except KeyError:
-            return Response({"detail": "GlobalTag Status not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GlobalTagStatus.DoesNotExist:
+            return Response({"detail": "GlobalTagStatus '%s' not found." % self.kwargs.get('newStatus')}, status=status.HTTP_404_NOT_FOUND)
 
         gt.status = gt_status
         serializer = GlobalTagCreateSerializer(instance=gt, data=model_to_dict(gt))
