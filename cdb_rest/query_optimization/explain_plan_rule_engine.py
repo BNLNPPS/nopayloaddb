@@ -7,6 +7,8 @@ from typing import Any, Iterable, Optional
 SAFE_SQL_ALLOW = re.compile(
     r"^(CREATE INDEX CONCURRENTLY|ANALYZE|VACUUM|REINDEX CONCURRENTLY"
     r"|SET\s+\w[\w.]*\s*=|ALTER INDEX\s+\S+\s+RENAME TO"
+    r"|ALTER SYSTEM SET\s+\w[\w.]*\s*="
+    r"|ALTER TABLE\s+\"?\w+\"?\s+SET\s*\(\s*autovacuum_vacuum_scale_factor\s*="
     r"|CREATE TEMP TABLE\s+\S+\s+ON COMMIT DROP)\b",
     re.IGNORECASE,
 )
@@ -51,6 +53,7 @@ class Suggestion:
     safe_sql: Optional[str]
     confidence: float
     source: str = "rule_engine"
+    parameter_name: Optional[str] = None
 
 
 class RuleEngine:
