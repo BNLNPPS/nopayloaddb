@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import transaction, connections
 from django.db.models import Prefetch, Q, Max
 from django.forms.models import model_to_dict
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 
 from rest_framework import status
 from rest_framework.generics import (
@@ -414,7 +414,7 @@ class PayloadIOVListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         data = request.data
 
         plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "role": "createpayload", "name": self.kwargs['payload_url']}
+        target_object = {"object": "GlobalTag", "role": "createpayload", "name": data.get('payload_url', '')}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -746,11 +746,6 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         data = request.data
 
-        plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
-        if not plugin.has_permission(request, target_object):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
         except KeyError:
@@ -759,6 +754,12 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
             piov = PayloadIOV.objects.get(id=data['piov_id'])
         except KeyError:
             return Response({"detail": "PayloadIOV not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        plugin = load_permission_plugin()
+        gt_name = p_list.global_tag.name if p_list.global_tag else ''
+        target_object = {"object": "GlobalTag", "role": "createiov", "name": gt_name}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         is_gt_locked = False
         if p_list.global_tag:
@@ -946,3 +947,10 @@ class CDBSettingAPIView(WriteAuthMixin, APIView):
             )
         value = settings.CDB_USER_SETTINGS.get(name)
         return Response({name: value})
+
+
+# ── Web views ────────────────────────────────────────────────────────────────
+
+def cdb_web_view(request):
+    """Render the Conditions Database web interface."""
+    return render(request, 'cdb_rest/app.html')

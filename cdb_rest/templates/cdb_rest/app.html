@@ -1,0 +1,1318 @@
+{% verbatim %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conditions Database</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-hover: #22252f;
+      --surface-alt: #161922;
+      --border: #2a2d3a;
+      --text: #e4e6ed;
+      --text-secondary: #8b8fa3;
+      --accent: #6c8cff;
+      --accent-dim: rgba(108, 140, 255, 0.12);
+      --green: #34d399;
+      --green-dim: rgba(52, 211, 153, 0.12);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.12);
+      --red: #f87171;
+      --red-dim: rgba(248, 113, 113, 0.12);
+      --cyan: #22d3ee;
+      --cyan-dim: rgba(34, 211, 238, 0.12);
+      --radius: 8px;
+      --nav-height: 56px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 8px;
+    }
+
+    .nav-brand {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      cursor: pointer;
+      margin-right: 24px;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+    }
+
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-link:hover { color: var(--text); background: var(--surface-hover); }
+    .nav-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 500; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .page-header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      max-width: 360px;
+      position: relative;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 8px 12px 8px 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box input::placeholder { color: var(--text-secondary); }
+
+    .filter-group {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+    }
+
+    .filter-btn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover { color: var(--text); }
+    .filter-btn.active { background: var(--accent-dim); color: var(--accent); font-weight: 500; }
+
+    .count-badge {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .per-page-select {
+      padding: 7px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .per-page-select:focus { border-color: var(--accent); }
+
+    /* ── Table ── */
+    .table-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: color 0.15s;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+    }
+
+    thead th:hover { color: var(--text); }
+    thead th.sorted { color: var(--accent); }
+
+    thead th .sort-arrow {
+      display: inline-block;
+      margin-left: 4px;
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    thead th:hover .sort-arrow, thead th.sorted .sort-arrow { opacity: 1; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-hover); }
+    tbody tr.clickable { cursor: pointer; }
+
+    tbody td {
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+
+    .cell-link {
+      color: var(--accent);
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .cell-link:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-unlocked { background: var(--amber-dim); color: var(--amber); }
+    .badge-locked   { background: var(--red-dim); color: var(--red); }
+    .badge-frozen   { background: var(--cyan-dim); color: var(--cyan); }
+
+    .mono {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .page-buttons { display: flex; gap: 4px; }
+
+    .page-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .page-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── Loading / Error / Empty ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 64px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { padding: 32px; text-align: center; color: var(--red); font-size: 14px; }
+    .empty-msg { padding: 48px; text-align: center; color: var(--text-secondary); font-size: 14px; }
+
+    /* ── Home page ── */
+    .home-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    .home-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .home-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .home-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .home-card p {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .home-card .card-count {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* ── Detail page ── */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .back-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .detail-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .meta-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .meta-card .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .meta-card .value {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* ── Comparison ── */
+    .compare-form {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .form-field label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .form-field input, .form-field select {
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-field input:focus, .form-field select:focus { border-color: var(--accent); }
+
+    .compare-btn {
+      padding: 8px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .compare-btn:hover { opacity: 0.85; }
+    .compare-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .compare-panel h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .diff-row { padding: 6px 12px; font-size: 13px; border-radius: 4px; margin-bottom: 2px; }
+    .diff-only-left  { background: var(--red-dim); color: var(--red); }
+    .diff-only-right { background: var(--green-dim); color: var(--green); }
+    .diff-both       { color: var(--text-secondary); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .home-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    const API = '/api/cdb_rest';
+
+    // ── Utilities ──
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function badgeClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'frozen') return 'badge badge-frozen';
+      if (s === 'locked') return 'badge badge-locked';
+      return 'badge badge-unlocked';
+    }
+
+    function SearchIcon() {
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      );
+    }
+
+    // ── Simple hash router ──
+
+    function useRoute() {
+      const [hash, setHash] = useState(window.location.hash || '#/');
+      useEffect(() => {
+        const handler = () => setHash(window.location.hash || '#/');
+        window.addEventListener('hashchange', handler);
+        return () => window.removeEventListener('hashchange', handler);
+      }, []);
+      return hash;
+    }
+
+    function navigate(path) { window.location.hash = path; }
+
+    function Link({ to, className, children, ...props }) {
+      return <a href={`#${to}`} className={className} onClick={e => { e.preventDefault(); navigate(to); }} {...props}>{children}</a>;
+    }
+
+    // ── Reusable hooks ──
+
+    function useFetch(url) {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      useEffect(() => {
+        setLoading(true);
+        setError(null);
+        fetch(url)
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+          .then(d => { setData(d); setLoading(false); })
+          .catch(e => { setError(e.message); setLoading(false); });
+      }, [url]);
+      return { data, loading, error };
+    }
+
+    function useSortFilter(data, defaultSort, searchFields) {
+      const [search, setSearch] = useState('');
+      const [sortField, setSortField] = useState(defaultSort);
+      const [sortDir, setSortDir] = useState('asc');
+      const [page, setPage] = useState(0);
+      const [pageSize, setPageSize] = useState(25);
+
+      const handleSort = useCallback(field => {
+        if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortField(field); setSortDir('asc'); }
+      }, [sortField]);
+
+      useEffect(() => { setPage(0); }, [search, pageSize]);
+
+      const filtered = useMemo(() => {
+        if (!data) return [];
+        let result = data;
+        if (search) {
+          const q = search.toLowerCase();
+          result = result.filter(item =>
+            searchFields.some(f => (item[f] || '').toString().toLowerCase().includes(q))
+          );
+        }
+        result = [...result].sort((a, b) => {
+          let av = a[sortField], bv = b[sortField];
+          if (av == null) av = '';
+          if (bv == null) bv = '';
+          if (typeof av === 'string') av = av.toLowerCase();
+          if (typeof bv === 'string') bv = bv.toLowerCase();
+          if (typeof av === 'number' && typeof bv === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+          if (av < bv) return sortDir === 'asc' ? -1 : 1;
+          if (av > bv) return sortDir === 'asc' ? 1 : -1;
+          return 0;
+        });
+        return result;
+      }, [data, search, sortField, sortDir, searchFields]);
+
+      const totalPages = Math.ceil(filtered.length / pageSize);
+      const pageData = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
+      return { search, setSearch, sortField, sortDir, handleSort, page, setPage, pageSize, setPageSize, filtered, pageData, totalPages };
+    }
+
+    // ── Reusable components ──
+
+    function SortHeader({ columns, sortField, sortDir, onSort }) {
+      return (
+        <thead>
+          <tr>
+            {columns.map(col => (
+              <th key={col.key} className={sortField === col.key ? 'sorted' : ''} onClick={() => onSort(col.key)}>
+                {col.label}
+                <span className="sort-arrow">{sortField === col.key ? (sortDir === 'asc' ? '▲' : '▼') : '▲'}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+      );
+    }
+
+    function Pagination({ page, totalPages, setPage, filtered, pageSize, setPageSize }) {
+      if (totalPages <= 1 && !setPageSize) return null;
+      return (
+        <div className="pagination">
+          <span>
+            {filtered.length} items
+            {totalPages > 1 && ` · Page ${page + 1} of ${totalPages}`}
+            {setPageSize && (
+              <select className="per-page-select" value={pageSize} onChange={e => setPageSize(Number(e.target.value))} style={{marginLeft: 12}}>
+                {[25, 50, 100, 200].map(n => <option key={n} value={n}>{n} / page</option>)}
+              </select>
+            )}
+          </span>
+          {totalPages > 1 && (
+            <div className="page-buttons">
+              <button className="page-btn" disabled={page === 0} onClick={() => setPage(0)}>First</button>
+              <button className="page-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
+              <button className="page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
+              <button className="page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>Last</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function LoadingState({ message }) {
+      return <div className="loading"><div className="spinner" />{message || 'Loading...'}</div>;
+    }
+
+    function Toolbar({ search, setSearch, placeholder, count, children, pageSize, setPageSize }) {
+      return (
+        <div className="toolbar">
+          <div className="search-box">
+            <SearchIcon />
+            <input type="text" placeholder={placeholder} value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          {children}
+          <span className="count-badge">{count} item{count !== 1 ? 's' : ''}</span>
+        </div>
+      );
+    }
+
+    // ── Pages ──
+
+    function HomePage() {
+      const { data: gts } = useFetch(`${API}/globalTags`);
+      const { data: pts } = useFetch(`${API}/pt`);
+      const { data: pls } = useFetch(`${API}/pl`);
+
+      const iovCount = useMemo(() => {
+        if (!pls || !Array.isArray(pls)) return '...';
+        return pls.reduce((sum, pl) => sum + (pl.payload_iov ? pl.payload_iov.length : 0), 0);
+      }, [pls]);
+
+      const cards = [
+        { title: 'Global Tags', desc: 'Browse, search, and inspect all global tags with their statuses and payload list counts.', route: '/globaltags', count: gts ? gts.length : '...' },
+        { title: 'Payload Types', desc: 'View all registered payload type definitions used across the conditions database.', route: '/payloadtypes', count: pts ? pts.length : '...' },
+        { title: 'Payload Lists', desc: 'Explore payload lists and their associations with global tags and payload types.', route: '/payloadlists', count: pls ? pls.length : '...' },
+        { title: 'Payload IOVs', desc: 'Browse all payload IOVs (intervals of validity) across the database.', route: '/iovs', count: iovCount },
+        { title: 'GT Comparison', desc: 'Compare two global tags side by side to see differences in their payload lists.', route: '/compare', count: null },
+      ];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Conditions Database</h1>
+            <p>Browse and manage conditions data</p>
+          </div>
+          <div className="home-grid">
+            {cards.map(c => (
+              <div key={c.route} className="home-card" onClick={() => navigate(c.route)}>
+                <h3>{c.title}</h3>
+                <p>{c.desc}</p>
+                {c.count !== null && <span className="card-count">{c.count}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function GlobalTagsPage() {
+      const { data, loading, error } = useFetch(`${API}/globalTags`);
+      const [statusFilter, setStatusFilter] = useState('all');
+
+      const statuses = useMemo(() => {
+        if (!data) return [];
+        return Array.from(new Set(data.map(gt => gt.status))).sort();
+      }, [data]);
+
+      const statusFiltered = useMemo(() => {
+        if (!data) return [];
+        if (statusFilter === 'all') return data;
+        return data.filter(gt => gt.status === statusFilter);
+      }, [data, statusFilter]);
+
+      const sf = useSortFilter(statusFiltered, 'name', ['name', 'author']);
+
+      const columns = [
+        { key: 'name', label: 'Name' },
+        { key: 'status', label: 'Status' },
+        { key: 'author', label: 'Author' },
+        { key: 'payload_lists_count', label: 'Payload Lists' },
+        { key: 'payload_iov_count', label: 'IOVs' },
+        { key: 'created', label: 'Created' },
+        { key: 'updated', label: 'Updated' },
+      ];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Global Tags</h1>
+            <p>All registered global tags in the conditions database</p>
+          </div>
+          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name or author..." count={sf.filtered.length}>
+            <div className="filter-group">
+              <button className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
+              {statuses.map(s => (
+                <button key={s} className={`filter-btn ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>{s}</button>
+              ))}
+            </div>
+          </Toolbar>
+          <div className="table-wrapper">
+            {loading ? <LoadingState message="Loading global tags..." /> :
+             error ? <div className="error-msg">Failed to load: {error}</div> :
+             sf.filtered.length === 0 ? <div className="empty-msg">No global tags found</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(gt => (
+                        <tr key={gt.id} className="clickable" onClick={() => navigate(`/globaltags/${gt.name}`)}>
+                          <td><span className="cell-link">{gt.name}</span></td>
+                          <td><span className={badgeClass(gt.status)}>{gt.status}</span></td>
+                          <td>{gt.author || '—'}</td>
+                          <td className="mono">{gt.payload_lists_count}</td>
+                          <td className="mono">{gt.payload_iov_count}</td>
+                          <td className="mono">{formatDate(gt.created)}</td>
+                          <td className="mono">{formatDate(gt.updated)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function GlobalTagDetailPage({ name }) {
+      const { data, loading, error } = useFetch(`${API}/globalTag/${name}`);
+      const { data: plMap } = useFetch(`${API}/gtPayloadLists/${name}`);
+
+      if (loading) return <div className="container"><LoadingState message={`Loading ${name}...`} /></div>;
+      if (error) return <div className="container"><div className="error-msg">Failed to load: {error}</div></div>;
+      if (!data) return null;
+
+      const statusObj = data.status || {};
+      const statusName = statusObj.name || statusObj;
+      const payloadLists = data.payload_lists || [];
+
+      return (
+        <div className="container">
+          <div className="detail-header">
+            <Link to="/globaltags" className="back-btn">&larr; Back</Link>
+            <div>
+              <h1 style={{fontSize: 22, fontWeight: 600}}>{data.name}</h1>
+            </div>
+            <span className={badgeClass(statusName)} style={{marginLeft: 8}}>{statusName}</span>
+          </div>
+          <div className="detail-meta">
+            <div className="meta-card"><div className="label">Author</div><div className="value">{data.author || '—'}</div></div>
+            <div className="meta-card"><div className="label">Status</div><div className="value">{statusName}</div></div>
+            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{payloadLists.length}</div></div>
+            <div className="meta-card"><div className="label">Created</div><div className="value mono">{formatDate(data.created)}</div></div>
+            <div className="meta-card"><div className="label">Updated</div><div className="value mono">{formatDate(data.updated)}</div></div>
+          </div>
+          <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload Lists</h2>
+          <div className="table-wrapper">
+            {payloadLists.length === 0 ? <div className="empty-msg">No payload lists attached</div> : (
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Payload Type</th>
+                      <th>IOVs</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payloadLists.map(pl => {
+                      const ptName = typeof pl.payload_type === 'object' ? pl.payload_type.name : pl.payload_type;
+                      return (
+                        <tr key={pl.id}>
+                          <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
+                          <td><Link to={`/payloadtypes/${encodeURIComponent(ptName)}`} className="cell-link">{ptName}</Link></td>
+                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td className="mono">{formatDate(pl.created)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function PayloadTypesPage() {
+      const { data, loading, error } = useFetch(`${API}/pt`);
+      const sf = useSortFilter(data, 'name', ['name']);
+
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'name', label: 'Name' },
+        { key: 'created', label: 'Created' },
+      ];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Payload Types</h1>
+            <p>Registered payload type definitions</p>
+          </div>
+          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name..." count={sf.filtered.length} />
+          <div className="table-wrapper">
+            {loading ? <LoadingState message="Loading payload types..." /> :
+             error ? <div className="error-msg">Failed to load: {error}</div> :
+             sf.filtered.length === 0 ? <div className="empty-msg">No payload types found</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(pt => (
+                        <tr key={pt.id} className="clickable" onClick={() => navigate(`/payloadtypes/${encodeURIComponent(pt.name)}`)}>
+                          <td className="mono">{pt.id}</td>
+                          <td><Link to={`/payloadtypes/${encodeURIComponent(pt.name)}`} className="cell-link">{pt.name}</Link></td>
+                          <td className="mono">{formatDate(pt.created)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function PayloadListsPage() {
+      const { data, loading, error } = useFetch(`${API}/pl`);
+      const sf = useSortFilter(data, 'name', ['name', 'global_tag', 'payload_type']);
+
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'name', label: 'Name' },
+        { key: 'global_tag', label: 'Global Tag' },
+        { key: 'payload_type', label: 'Payload Type' },
+        { key: 'iov_count', label: 'IOVs' },
+        { key: 'created', label: 'Created' },
+      ];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Payload Lists</h1>
+            <p>All payload list containers in the database</p>
+          </div>
+          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name, global tag, or type..." count={sf.filtered.length} />
+          <div className="table-wrapper">
+            {loading ? <LoadingState message="Loading payload lists..." /> :
+             error ? <div className="error-msg">Failed to load: {error}</div> :
+             sf.filtered.length === 0 ? <div className="empty-msg">No payload lists found</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(pl => (
+                        <tr key={pl.id} className="clickable" onClick={() => navigate(`/payloadlists/${encodeURIComponent(pl.name)}`)}>
+                          <td className="mono">{pl.id}</td>
+                          <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
+                          <td>{pl.global_tag ? <Link to={`/globaltags/${encodeURIComponent(pl.global_tag)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.global_tag}</Link> : '—'}</td>
+                          <td>{pl.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(pl.payload_type)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.payload_type}</Link> : '—'}</td>
+                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td className="mono">{formatDate(pl.created)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function PayloadTypeDetailPage({ name }) {
+      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
+
+      const typePls = useMemo(() => {
+        if (!allPls) return [];
+        return allPls.filter(pl => pl.payload_type === name);
+      }, [allPls, name]);
+
+      const totalIovs = useMemo(() => typePls.reduce((sum, pl) => sum + (pl.payload_iov ? pl.payload_iov.length : 0), 0), [typePls]);
+
+      const sf = useSortFilter(typePls, 'name', ['name', 'global_tag']);
+
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'name', label: 'Payload List' },
+        { key: 'global_tag', label: 'Global Tag' },
+        { key: 'iov_count', label: 'IOVs' },
+        { key: 'created', label: 'Created' },
+      ];
+
+      return (
+        <div className="container">
+          <div className="detail-header">
+            <Link to="/payloadtypes" className="back-btn">&larr; Back</Link>
+            <div>
+              <h1 style={{fontSize: 22, fontWeight: 600}}>{name}</h1>
+              <p style={{color: 'var(--text-secondary)', fontSize: 13, marginTop: 2}}>Payload Type</p>
+            </div>
+          </div>
+          <div className="detail-meta">
+            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{typePls.length}</div></div>
+            <div className="meta-card"><div className="label">Total IOVs</div><div className="value">{totalIovs}</div></div>
+          </div>
+          <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload Lists using this type</h2>
+          <div className="table-wrapper">
+            {loading ? <LoadingState message="Loading payload lists..." /> :
+             error ? <div className="error-msg">Failed to load: {error}</div> :
+             typePls.length === 0 ? <div className="empty-msg">No payload lists use this type</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(pl => (
+                        <tr key={pl.id} className="clickable" onClick={() => navigate(`/payloadlists/${encodeURIComponent(pl.name)}`)}>
+                          <td className="mono">{pl.id}</td>
+                          <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
+                          <td>{pl.global_tag ? <Link to={`/globaltags/${encodeURIComponent(pl.global_tag)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.global_tag}</Link> : '—'}</td>
+                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td className="mono">{formatDate(pl.created)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function PayloadListDetailPage({ name }) {
+      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
+
+      const pl = useMemo(() => {
+        if (!allPls) return null;
+        return allPls.find(p => p.name === name) || null;
+      }, [allPls, name]);
+
+      const iovs = useMemo(() => (pl && pl.payload_iov) ? pl.payload_iov : [], [pl]);
+      const sf = useSortFilter(iovs, 'major_iov', ['payload_url', 'payload_list']);
+
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'payload_url', label: 'Payload URL' },
+        { key: 'major_iov', label: 'Major IOV' },
+        { key: 'minor_iov', label: 'Minor IOV' },
+        { key: 'major_iov_end', label: 'Major End' },
+        { key: 'minor_iov_end', label: 'Minor End' },
+        { key: 'checksum', label: 'Checksum' },
+        { key: 'inserted', label: 'Inserted' },
+      ];
+
+      if (loading) return <div className="container"><LoadingState message={`Loading ${name}...`} /></div>;
+      if (error) return <div className="container"><div className="error-msg">Failed to load: {error}</div></div>;
+      if (!pl) return <div className="container"><div className="empty-msg">Payload list "{name}" not found</div></div>;
+
+      return (
+        <div className="container">
+          <div className="detail-header">
+            <Link to="/payloadlists" className="back-btn">&larr; Back</Link>
+            <div>
+              <h1 style={{fontSize: 22, fontWeight: 600}}>{pl.name}</h1>
+              <p style={{color: 'var(--text-secondary)', fontSize: 13, marginTop: 2}}>Payload List</p>
+            </div>
+          </div>
+          <div className="detail-meta">
+            <div className="meta-card">
+              <div className="label">Global Tag</div>
+              <div className="value">{pl.global_tag ? <Link to={`/globaltags/${encodeURIComponent(pl.global_tag)}`} className="cell-link">{pl.global_tag}</Link> : '—'}</div>
+            </div>
+            <div className="meta-card">
+              <div className="label">Payload Type</div>
+              <div className="value">{pl.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(pl.payload_type)}`} className="cell-link">{pl.payload_type}</Link> : '—'}</div>
+            </div>
+            <div className="meta-card"><div className="label">IOVs</div><div className="value">{iovs.length}</div></div>
+            <div className="meta-card"><div className="label">Created</div><div className="value mono">{formatDate(pl.created)}</div></div>
+          </div>
+          <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload IOVs</h2>
+          {iovs.length > 0 && (
+            <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by payload URL..." count={sf.filtered.length} />
+          )}
+          <div className="table-wrapper">
+            {iovs.length === 0 ? <div className="empty-msg">No IOVs in this payload list</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(iov => (
+                        <tr key={iov.id}>
+                          <td className="mono">{iov.id}</td>
+                          <td style={{fontWeight: 500}}>{iov.payload_url}</td>
+                          <td className="mono">{iov.major_iov}</td>
+                          <td className="mono">{iov.minor_iov}</td>
+                          <td className="mono">{iov.major_iov_end}</td>
+                          <td className="mono">{iov.minor_iov_end}</td>
+                          <td className="mono" style={{maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis'}} title={iov.checksum}>{iov.checksum}</td>
+                          <td className="mono">{formatDate(iov.inserted)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function PayloadIOVsPage() {
+      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
+
+      const allIovs = useMemo(() => {
+        if (!allPls) return [];
+        return allPls.flatMap(pl =>
+          (pl.payload_iov || []).map(iov => ({
+            ...iov,
+            payload_list_name: pl.name,
+            global_tag: pl.global_tag || '—',
+            payload_type: pl.payload_type || '—',
+          }))
+        );
+      }, [allPls]);
+
+      const sf = useSortFilter(allIovs, 'id', ['payload_url', 'payload_list_name', 'global_tag', 'payload_type']);
+
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'payload_url', label: 'Payload URL' },
+        { key: 'payload_list_name', label: 'Payload List' },
+        { key: 'global_tag', label: 'Global Tag' },
+        { key: 'payload_type', label: 'Payload Type' },
+        { key: 'major_iov', label: 'Major IOV' },
+        { key: 'minor_iov', label: 'Minor IOV' },
+        { key: 'major_iov_end', label: 'Major End' },
+        { key: 'minor_iov_end', label: 'Minor End' },
+        { key: 'inserted', label: 'Inserted' },
+      ];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Payload IOVs</h1>
+            <p>All intervals of validity in the database</p>
+          </div>
+          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by URL, list, tag, or type..." count={sf.filtered.length} />
+          <div className="table-wrapper">
+            {loading ? <LoadingState message="Loading IOVs..." /> :
+             error ? <div className="error-msg">Failed to load: {error}</div> :
+             allIovs.length === 0 ? <div className="empty-msg">No IOVs found</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <tbody>
+                      {sf.pageData.map(iov => (
+                        <tr key={iov.id}>
+                          <td className="mono">{iov.id}</td>
+                          <td style={{fontWeight: 500}}>{iov.payload_url}</td>
+                          <td><Link to={`/payloadlists/${encodeURIComponent(iov.payload_list_name)}`} className="cell-link">{iov.payload_list_name}</Link></td>
+                          <td>{iov.global_tag !== '—' ? <Link to={`/globaltags/${encodeURIComponent(iov.global_tag)}`} className="cell-link">{iov.global_tag}</Link> : '—'}</td>
+                          <td>{iov.payload_type !== '—' ? <Link to={`/payloadtypes/${encodeURIComponent(iov.payload_type)}`} className="cell-link">{iov.payload_type}</Link> : '—'}</td>
+                          <td className="mono">{iov.major_iov}</td>
+                          <td className="mono">{iov.minor_iov}</td>
+                          <td className="mono">{iov.major_iov_end}</td>
+                          <td className="mono">{iov.minor_iov_end}</td>
+                          <td className="mono">{formatDate(iov.inserted)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination {...sf} />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function ComparePage() {
+      const [gt1, setGt1] = useState('');
+      const [gt2, setGt2] = useState('');
+      const [mode, setMode] = useState('diff');
+      const [result, setResult] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+
+      async function doCompare() {
+        if (!gt1.trim() || !gt2.trim()) return;
+        setLoading(true);
+        setError(null);
+        try {
+          const [r1, r2] = await Promise.all([
+            fetch(`${API}/gtPayloadLists/${gt1.trim()}`).then(r => { if (!r.ok) throw new Error(`GT "${gt1}" not found`); return r.json(); }),
+            fetch(`${API}/gtPayloadLists/${gt2.trim()}`).then(r => { if (!r.ok) throw new Error(`GT "${gt2}" not found`); return r.json(); }),
+          ]);
+
+          const map1 = {};
+          const map2 = {};
+          if (Array.isArray(r1)) r1.forEach(item => { map1[item.payload_type || item.type] = item.name || item.payload_list; });
+          else Object.entries(r1).forEach(([k, v]) => { map1[k] = v; });
+          if (Array.isArray(r2)) r2.forEach(item => { map2[item.payload_type || item.type] = item.name || item.payload_list; });
+          else Object.entries(r2).forEach(([k, v]) => { map2[k] = v; });
+
+          const allTypes = Array.from(new Set([...Object.keys(map1), ...Object.keys(map2)])).sort();
+          const comparison = allTypes.map(type => ({
+            type,
+            left: map1[type] || null,
+            right: map2[type] || null,
+            match: map1[type] === map2[type],
+          }));
+          setResult({ gt1: gt1.trim(), gt2: gt2.trim(), comparison });
+        } catch (e) {
+          setError(e.message);
+        }
+        setLoading(false);
+      }
+
+      const shown = result ? (mode === 'diff' ? result.comparison.filter(c => !c.match) : result.comparison) : [];
+
+      return (
+        <div className="container">
+          <div className="page-header">
+            <h1>Global Tag Comparison</h1>
+            <p>Compare payload lists between two global tags</p>
+          </div>
+          <div className="compare-form">
+            <div className="form-field">
+              <label>Global Tag 1</label>
+              <input value={gt1} onChange={e => setGt1(e.target.value)} placeholder="Enter GT name..." onKeyDown={e => e.key === 'Enter' && doCompare()} />
+            </div>
+            <div className="form-field">
+              <label>Global Tag 2</label>
+              <input value={gt2} onChange={e => setGt2(e.target.value)} placeholder="Enter GT name..." onKeyDown={e => e.key === 'Enter' && doCompare()} />
+            </div>
+            <div className="form-field" style={{minWidth: 140, flex: 'none'}}>
+              <label>Mode</label>
+              <select value={mode} onChange={e => setMode(e.target.value)}>
+                <option value="diff">Differences only</option>
+                <option value="full">Full comparison</option>
+              </select>
+            </div>
+            <button className="compare-btn" disabled={!gt1.trim() || !gt2.trim() || loading} onClick={doCompare}>
+              {loading ? 'Comparing...' : 'Compare'}
+            </button>
+          </div>
+          {error && <div className="error-msg" style={{marginBottom: 16}}>{error}</div>}
+          {result && (
+            <div className="table-wrapper">
+              {shown.length === 0 ? (
+                <div className="empty-msg">
+                  {mode === 'diff' ? 'No differences found — the global tags have identical payload lists.' : 'No payload lists to show.'}
+                </div>
+              ) : (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Payload Type</th>
+                        <th>{result.gt1}</th>
+                        <th>{result.gt2}</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shown.map(row => (
+                        <tr key={row.type}>
+                          <td style={{fontWeight: 500}}>{row.type}</td>
+                          <td className="mono">{row.left || '—'}</td>
+                          <td className="mono">{row.right || '—'}</td>
+                          <td>
+                            {row.match ? (
+                              <span className="badge badge-frozen">Match</span>
+                            ) : row.left && row.right ? (
+                              <span className="badge badge-unlocked">Different</span>
+                            ) : row.left ? (
+                              <span className="badge badge-locked">Only in {result.gt1}</span>
+                            ) : (
+                              <span className="badge badge-unlocked" style={{background: 'var(--green-dim)', color: 'var(--green)'}}>Only in {result.gt2}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {shown.length > 0 && (
+                <div className="pagination">
+                  <span>{shown.length} payload type{shown.length !== 1 ? 's' : ''}{mode === 'diff' ? ' with differences' : ' total'}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── App ──
+
+    function App() {
+      const route = useRoute();
+      const path = route.replace(/^#/, '') || '/';
+
+      const navLinks = [
+        { to: '/globaltags', label: 'Global Tags' },
+        { to: '/payloadtypes', label: 'Payload Types' },
+        { to: '/payloadlists', label: 'Payload Lists' },
+        { to: '/iovs', label: 'IOVs' },
+        { to: '/compare', label: 'Compare' },
+      ];
+
+      let page;
+      if (path === '/') page = <HomePage />;
+      else if (path === '/globaltags') page = <GlobalTagsPage />;
+      else if (path.startsWith('/globaltags/')) page = <GlobalTagDetailPage name={decodeURIComponent(path.split('/globaltags/')[1])} />;
+      else if (path === '/payloadtypes') page = <PayloadTypesPage />;
+      else if (path.startsWith('/payloadtypes/')) page = <PayloadTypeDetailPage name={decodeURIComponent(path.split('/payloadtypes/')[1])} />;
+      else if (path === '/payloadlists') page = <PayloadListsPage />;
+      else if (path.startsWith('/payloadlists/')) page = <PayloadListDetailPage name={decodeURIComponent(path.split('/payloadlists/')[1])} />;
+      else if (path === '/iovs') page = <PayloadIOVsPage />;
+      else if (path === '/compare') page = <ComparePage />;
+      else page = <div className="container"><div className="empty-msg">Page not found</div></div>;
+
+      return (
+        <>
+          <nav>
+            <Link to="/" className="nav-brand">CDB</Link>
+            <div className="nav-links">
+              {navLinks.map(l => (
+                <Link key={l.to} to={l.to} className={`nav-link ${path.startsWith(l.to) ? 'active' : ''}`}>{l.label}</Link>
+              ))}
+            </div>
+          </nav>
+          {page}
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
+{% endverbatim %}
