@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>Conditions Database</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -556,6 +557,8 @@
       const [data, setData] = useState(null);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState(null);
+      const [tick, setTick] = useState(0);
+      const reload = useCallback(() => setTick(t => t + 1), []);
       useEffect(() => {
         setLoading(true);
         setError(null);
@@ -563,8 +566,62 @@
           .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
           .then(d => { setData(d); setLoading(false); })
           .catch(e => { setError(e.message); setLoading(false); });
-      }, [url]);
-      return { data, loading, error };
+      }, [url, tick]);
+      return { data, loading, error, reload };
+    }
+
+    // Server-side table state: search/sort/page become query params,
+    // every change triggers a small paginated fetch instead of loading the full table.
+    function useServerTable(endpoint, { defaultSort = 'name', extraParams = {} } = {}) {
+      const [search, setSearch] = useState('');
+      const [debouncedSearch, setDebouncedSearch] = useState('');
+      const [sortField, setSortField] = useState(defaultSort);
+      const [sortDir, setSortDir] = useState('asc');
+      const [page, setPage] = useState(0);
+      const [pageSize, setPageSize] = useState(25);
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [tick, setTick] = useState(0);
+      const reload = useCallback(() => setTick(t => t + 1), []);
+      const extraKey = JSON.stringify(extraParams);
+
+      useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(t);
+      }, [search]);
+
+      useEffect(() => { setPage(0); }, [debouncedSearch, pageSize, extraKey]);
+
+      const handleSort = useCallback(field => {
+        setPage(0);
+        if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortField(field); setSortDir('asc'); }
+      }, [sortField]);
+
+      useEffect(() => {
+        const params = new URLSearchParams({
+          page: page + 1, page_size: pageSize, sort: sortField, order: sortDir,
+        });
+        if (debouncedSearch) params.set('search', debouncedSearch);
+        Object.entries(JSON.parse(extraKey)).forEach(([k, v]) => { if (v) params.set(k, v); });
+        setLoading(true);
+        setError(null);
+        fetch(`${API}/${endpoint}?${params}`)
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+          .then(d => { setData(d); setLoading(false); })
+          .catch(e => { setError(e.message); setLoading(false); });
+      }, [endpoint, page, pageSize, sortField, sortDir, debouncedSearch, extraKey, tick]);
+
+      return {
+        search, setSearch, sortField, sortDir, handleSort,
+        page, setPage, pageSize, setPageSize,
+        rows: data ? data.results : [],
+        count: data ? data.count : 0,
+        totalPages: data ? data.total_pages : 0,
+        ready: data !== null,
+        loading, error, reload,
+      };
     }
 
     function useSortFilter(data, defaultSort, searchFields) {
@@ -627,12 +684,13 @@
       );
     }
 
-    function Pagination({ page, totalPages, setPage, filtered, pageSize, setPageSize }) {
+    function Pagination({ page, totalPages, setPage, filtered, count, pageSize, setPageSize }) {
+      const total = (count !== undefined) ? count : filtered.length;
       if (totalPages <= 1 && !setPageSize) return null;
       return (
         <div className="pagination">
           <span>
-            {filtered.length} items
+            {total} items
             {totalPages > 1 && ` · Page ${page + 1} of ${totalPages}`}
             {setPageSize && (
               <select className="per-page-select" value={pageSize} onChange={e => setPageSize(Number(e.target.value))} style={{marginLeft: 12}}>
@@ -656,7 +714,15 @@
       return <div className="loading"><div className="spinner" />{message || 'Loading...'}</div>;
     }
 
-    function Toolbar({ search, setSearch, placeholder, count, children, pageSize, setPageSize }) {
+    function RefreshIcon() {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+      );
+    }
+
+    function Toolbar({ search, setSearch, placeholder, count, children, pageSize, setPageSize, onRefresh, loading }) {
       return (
         <div className="toolbar">
           <div className="search-box">
@@ -664,6 +730,12 @@
             <input type="text" placeholder={placeholder} value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {children}
+          {onRefresh && (
+            <button className="page-btn" onClick={onRefresh} disabled={loading} title="Refresh data" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+              <span style={loading ? {animation: 'spin 0.6s linear infinite', display: 'inline-block'} : undefined}><RefreshIcon /></span>
+              Refresh
+            </button>
+          )}
           <span className="count-badge">{count} item{count !== 1 ? 's' : ''}</span>
         </div>
       );
@@ -671,20 +743,21 @@
 
     // ── Pages ──
 
-    function HomePage() {
-      const { data: gts } = useFetch(`${API}/globalTags`);
-      const { data: pts } = useFetch(`${API}/pt`);
-      const { data: pls } = useFetch(`${API}/pl`);
+    function useCount(endpoint) {
+      const { data } = useFetch(`${API}/${endpoint}?page=1&page_size=1`);
+      return data ? data.count : '...';
+    }
 
-      const iovCount = useMemo(() => {
-        if (!pls || !Array.isArray(pls)) return '...';
-        return pls.reduce((sum, pl) => sum + (pl.payload_iov ? pl.payload_iov.length : 0), 0);
-      }, [pls]);
+    function HomePage() {
+      const gtCount = useCount('global-tags');
+      const ptCount = useCount('payload-types');
+      const plCount = useCount('payload-lists');
+      const iovCount = useCount('payload-iovs');
 
       const cards = [
-        { title: 'Global Tags', desc: 'Browse, search, and inspect all global tags with their statuses and payload list counts.', route: '/globaltags', count: gts ? gts.length : '...' },
-        { title: 'Payload Types', desc: 'View all registered payload type definitions used across the conditions database.', route: '/payloadtypes', count: pts ? pts.length : '...' },
-        { title: 'Payload Lists', desc: 'Explore payload lists and their associations with global tags and payload types.', route: '/payloadlists', count: pls ? pls.length : '...' },
+        { title: 'Global Tags', desc: 'Browse, search, and inspect all global tags with their statuses and payload list counts.', route: '/globaltags', count: gtCount },
+        { title: 'Payload Types', desc: 'View all registered payload type definitions used across the conditions database.', route: '/payloadtypes', count: ptCount },
+        { title: 'Payload Lists', desc: 'Explore payload lists and their associations with global tags and payload types.', route: '/payloadlists', count: plCount },
         { title: 'Payload IOVs', desc: 'Browse all payload IOVs (intervals of validity) across the database.', route: '/iovs', count: iovCount },
         { title: 'GT Comparison', desc: 'Compare two global tags side by side to see differences in their payload lists.', route: '/compare', count: null },
       ];
@@ -709,21 +782,14 @@
     }
 
     function GlobalTagsPage() {
-      const { data, loading, error } = useFetch(`${API}/globalTags`);
       const [statusFilter, setStatusFilter] = useState('all');
+      const { data: statusList } = useFetch(`${API}/global-tags/statuses`);
+      const t = useServerTable('global-tags', {
+        defaultSort: 'name',
+        extraParams: { status: statusFilter === 'all' ? '' : statusFilter },
+      });
 
-      const statuses = useMemo(() => {
-        if (!data) return [];
-        return Array.from(new Set(data.map(gt => gt.status))).sort();
-      }, [data]);
-
-      const statusFiltered = useMemo(() => {
-        if (!data) return [];
-        if (statusFilter === 'all') return data;
-        return data.filter(gt => gt.status === statusFilter);
-      }, [data, statusFilter]);
-
-      const sf = useSortFilter(statusFiltered, 'name', ['name', 'author']);
+      const statuses = statusList ? statusList.map(s => s.name).sort() : [];
 
       const columns = [
         { key: 'name', label: 'Name' },
@@ -741,7 +807,7 @@
             <h1>Global Tags</h1>
             <p>All registered global tags in the conditions database</p>
           </div>
-          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name or author..." count={sf.filtered.length}>
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search by name or author..." count={t.count} onRefresh={t.reload} loading={t.loading}>
             <div className="filter-group">
               <button className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
               {statuses.map(s => (
@@ -750,15 +816,15 @@
             </div>
           </Toolbar>
           <div className="table-wrapper">
-            {loading ? <LoadingState message="Loading global tags..." /> :
-             error ? <div className="error-msg">Failed to load: {error}</div> :
-             sf.filtered.length === 0 ? <div className="empty-msg">No global tags found</div> : (
+            {!t.ready ? <LoadingState message="Loading global tags..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No global tags found</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(gt => (
+                      {t.rows.map(gt => (
                         <tr key={gt.id} className="clickable" onClick={() => navigate(`/globaltags/${gt.name}`)}>
                           <td><span className="cell-link">{gt.name}</span></td>
                           <td><span className={badgeClass(gt.status)}>{gt.status}</span></td>
@@ -772,7 +838,7 @@
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>
@@ -781,16 +847,19 @@
     }
 
     function GlobalTagDetailPage({ name }) {
-      const { data, loading, error } = useFetch(`${API}/globalTag/${name}`);
-      const { data: plMap } = useFetch(`${API}/gtPayloadLists/${name}`);
+      const { data, loading, error } = useFetch(`${API}/global-tags/${encodeURIComponent(name)}?light=1`);
+      const t = useServerTable('payload-lists', { defaultSort: 'name', extraParams: { global_tag: name } });
+
+      const columns = [
+        { key: 'name', label: 'Name' },
+        { key: 'payload_type', label: 'Payload Type' },
+        { key: 'iov_count', label: 'IOVs' },
+        { key: 'created', label: 'Created' },
+      ];
 
       if (loading) return <div className="container"><LoadingState message={`Loading ${name}...`} /></div>;
       if (error) return <div className="container"><div className="error-msg">Failed to load: {error}</div></div>;
       if (!data) return null;
-
-      const statusObj = data.status || {};
-      const statusName = statusObj.name || statusObj;
-      const payloadLists = data.payload_lists || [];
 
       return (
         <div className="container">
@@ -799,43 +868,40 @@
             <div>
               <h1 style={{fontSize: 22, fontWeight: 600}}>{data.name}</h1>
             </div>
-            <span className={badgeClass(statusName)} style={{marginLeft: 8}}>{statusName}</span>
+            <span className={badgeClass(data.status)} style={{marginLeft: 8}}>{data.status}</span>
           </div>
           <div className="detail-meta">
             <div className="meta-card"><div className="label">Author</div><div className="value">{data.author || '—'}</div></div>
-            <div className="meta-card"><div className="label">Status</div><div className="value">{statusName}</div></div>
-            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{payloadLists.length}</div></div>
+            <div className="meta-card"><div className="label">Status</div><div className="value">{data.status}</div></div>
+            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{data.payload_lists_count}</div></div>
+            <div className="meta-card"><div className="label">IOVs</div><div className="value">{data.payload_iov_count}</div></div>
             <div className="meta-card"><div className="label">Created</div><div className="value mono">{formatDate(data.created)}</div></div>
             <div className="meta-card"><div className="label">Updated</div><div className="value mono">{formatDate(data.updated)}</div></div>
           </div>
           <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload Lists</h2>
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search payload lists..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {payloadLists.length === 0 ? <div className="empty-msg">No payload lists attached</div> : (
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Payload Type</th>
-                      <th>IOVs</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payloadLists.map(pl => {
-                      const ptName = typeof pl.payload_type === 'object' ? pl.payload_type.name : pl.payload_type;
-                      return (
+            {!t.ready ? <LoadingState message="Loading payload lists..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No payload lists attached</div> : (
+              <>
+                <div className="table-scroll">
+                  <table>
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
+                    <tbody>
+                      {t.rows.map(pl => (
                         <tr key={pl.id}>
                           <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
-                          <td><Link to={`/payloadtypes/${encodeURIComponent(ptName)}`} className="cell-link">{ptName}</Link></td>
-                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td>{pl.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(pl.payload_type)}`} className="cell-link">{pl.payload_type}</Link> : '—'}</td>
+                          <td className="mono">{pl.iov_count}</td>
                           <td className="mono">{formatDate(pl.created)}</td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
+              </>
             )}
           </div>
         </div>
@@ -843,8 +909,7 @@
     }
 
     function PayloadTypesPage() {
-      const { data, loading, error } = useFetch(`${API}/pt`);
-      const sf = useSortFilter(data, 'name', ['name']);
+      const t = useServerTable('payload-types', { defaultSort: 'name' });
 
       const columns = [
         { key: 'id', label: 'ID' },
@@ -858,17 +923,17 @@
             <h1>Payload Types</h1>
             <p>Registered payload type definitions</p>
           </div>
-          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name..." count={sf.filtered.length} />
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search by name..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {loading ? <LoadingState message="Loading payload types..." /> :
-             error ? <div className="error-msg">Failed to load: {error}</div> :
-             sf.filtered.length === 0 ? <div className="empty-msg">No payload types found</div> : (
+            {!t.ready ? <LoadingState message="Loading payload types..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No payload types found</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(pt => (
+                      {t.rows.map(pt => (
                         <tr key={pt.id} className="clickable" onClick={() => navigate(`/payloadtypes/${encodeURIComponent(pt.name)}`)}>
                           <td className="mono">{pt.id}</td>
                           <td><Link to={`/payloadtypes/${encodeURIComponent(pt.name)}`} className="cell-link">{pt.name}</Link></td>
@@ -878,7 +943,7 @@
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>
@@ -887,8 +952,7 @@
     }
 
     function PayloadListsPage() {
-      const { data, loading, error } = useFetch(`${API}/pl`);
-      const sf = useSortFilter(data, 'name', ['name', 'global_tag', 'payload_type']);
+      const t = useServerTable('payload-lists', { defaultSort: 'name' });
 
       const columns = [
         { key: 'id', label: 'ID' },
@@ -905,30 +969,30 @@
             <h1>Payload Lists</h1>
             <p>All payload list containers in the database</p>
           </div>
-          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by name, global tag, or type..." count={sf.filtered.length} />
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search by name, global tag, or type..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {loading ? <LoadingState message="Loading payload lists..." /> :
-             error ? <div className="error-msg">Failed to load: {error}</div> :
-             sf.filtered.length === 0 ? <div className="empty-msg">No payload lists found</div> : (
+            {!t.ready ? <LoadingState message="Loading payload lists..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No payload lists found</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(pl => (
+                      {t.rows.map(pl => (
                         <tr key={pl.id} className="clickable" onClick={() => navigate(`/payloadlists/${encodeURIComponent(pl.name)}`)}>
                           <td className="mono">{pl.id}</td>
                           <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
                           <td>{pl.global_tag ? <Link to={`/globaltags/${encodeURIComponent(pl.global_tag)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.global_tag}</Link> : '—'}</td>
                           <td>{pl.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(pl.payload_type)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.payload_type}</Link> : '—'}</td>
-                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td className="mono">{pl.iov_count}</td>
                           <td className="mono">{formatDate(pl.created)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>
@@ -937,16 +1001,8 @@
     }
 
     function PayloadTypeDetailPage({ name }) {
-      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
-
-      const typePls = useMemo(() => {
-        if (!allPls) return [];
-        return allPls.filter(pl => pl.payload_type === name);
-      }, [allPls, name]);
-
-      const totalIovs = useMemo(() => typePls.reduce((sum, pl) => sum + (pl.payload_iov ? pl.payload_iov.length : 0), 0), [typePls]);
-
-      const sf = useSortFilter(typePls, 'name', ['name', 'global_tag']);
+      const t = useServerTable('payload-lists', { defaultSort: 'name', extraParams: { payload_type: name } });
+      const { data: iovStats } = useFetch(`${API}/payload-iovs?page=1&page_size=1&payload_type=${encodeURIComponent(name)}`);
 
       const columns = [
         { key: 'id', label: 'ID' },
@@ -966,32 +1022,33 @@
             </div>
           </div>
           <div className="detail-meta">
-            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{typePls.length}</div></div>
-            <div className="meta-card"><div className="label">Total IOVs</div><div className="value">{totalIovs}</div></div>
+            <div className="meta-card"><div className="label">Payload Lists</div><div className="value">{t.ready ? t.count : '...'}</div></div>
+            <div className="meta-card"><div className="label">Total IOVs</div><div className="value">{iovStats ? iovStats.count : '...'}</div></div>
           </div>
           <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload Lists using this type</h2>
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search payload lists..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {loading ? <LoadingState message="Loading payload lists..." /> :
-             error ? <div className="error-msg">Failed to load: {error}</div> :
-             typePls.length === 0 ? <div className="empty-msg">No payload lists use this type</div> : (
+            {!t.ready ? <LoadingState message="Loading payload lists..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No payload lists use this type</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(pl => (
+                      {t.rows.map(pl => (
                         <tr key={pl.id} className="clickable" onClick={() => navigate(`/payloadlists/${encodeURIComponent(pl.name)}`)}>
                           <td className="mono">{pl.id}</td>
                           <td><Link to={`/payloadlists/${encodeURIComponent(pl.name)}`} className="cell-link">{pl.name}</Link></td>
                           <td>{pl.global_tag ? <Link to={`/globaltags/${encodeURIComponent(pl.global_tag)}`} className="cell-link" onClick={e => e.stopPropagation()}>{pl.global_tag}</Link> : '—'}</td>
-                          <td className="mono">{pl.payload_iov ? pl.payload_iov.length : 0}</td>
+                          <td className="mono">{pl.iov_count}</td>
                           <td className="mono">{formatDate(pl.created)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>
@@ -1000,15 +1057,8 @@
     }
 
     function PayloadListDetailPage({ name }) {
-      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
-
-      const pl = useMemo(() => {
-        if (!allPls) return null;
-        return allPls.find(p => p.name === name) || null;
-      }, [allPls, name]);
-
-      const iovs = useMemo(() => (pl && pl.payload_iov) ? pl.payload_iov : [], [pl]);
-      const sf = useSortFilter(iovs, 'major_iov', ['payload_url', 'payload_list']);
+      const { data: pl, loading, error } = useFetch(`${API}/payload-lists/by-name/${encodeURIComponent(name)}`);
+      const t = useServerTable('payload-iovs', { defaultSort: 'major_iov', extraParams: { payload_list: name } });
 
       const columns = [
         { key: 'id', label: 'ID' },
@@ -1043,21 +1093,21 @@
               <div className="label">Payload Type</div>
               <div className="value">{pl.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(pl.payload_type)}`} className="cell-link">{pl.payload_type}</Link> : '—'}</div>
             </div>
-            <div className="meta-card"><div className="label">IOVs</div><div className="value">{iovs.length}</div></div>
+            <div className="meta-card"><div className="label">IOVs</div><div className="value">{pl.iov_count}</div></div>
             <div className="meta-card"><div className="label">Created</div><div className="value mono">{formatDate(pl.created)}</div></div>
           </div>
           <h2 style={{fontSize: 18, fontWeight: 600, marginBottom: 16}}>Payload IOVs</h2>
-          {iovs.length > 0 && (
-            <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by payload URL..." count={sf.filtered.length} />
-          )}
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search by payload URL..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {iovs.length === 0 ? <div className="empty-msg">No IOVs in this payload list</div> : (
+            {!t.ready ? <LoadingState message="Loading IOVs..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No IOVs in this payload list</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(iov => (
+                      {t.rows.map(iov => (
                         <tr key={iov.id}>
                           <td className="mono">{iov.id}</td>
                           <td style={{fontWeight: 500}}>{iov.payload_url}</td>
@@ -1072,7 +1122,7 @@
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>
@@ -1081,26 +1131,12 @@
     }
 
     function PayloadIOVsPage() {
-      const { data: allPls, loading, error } = useFetch(`${API}/pl`);
-
-      const allIovs = useMemo(() => {
-        if (!allPls) return [];
-        return allPls.flatMap(pl =>
-          (pl.payload_iov || []).map(iov => ({
-            ...iov,
-            payload_list_name: pl.name,
-            global_tag: pl.global_tag || '—',
-            payload_type: pl.payload_type || '—',
-          }))
-        );
-      }, [allPls]);
-
-      const sf = useSortFilter(allIovs, 'id', ['payload_url', 'payload_list_name', 'global_tag', 'payload_type']);
+      const t = useServerTable('payload-iovs', { defaultSort: 'id' });
 
       const columns = [
         { key: 'id', label: 'ID' },
         { key: 'payload_url', label: 'Payload URL' },
-        { key: 'payload_list_name', label: 'Payload List' },
+        { key: 'payload_list', label: 'Payload List' },
         { key: 'global_tag', label: 'Global Tag' },
         { key: 'payload_type', label: 'Payload Type' },
         { key: 'major_iov', label: 'Major IOV' },
@@ -1116,23 +1152,23 @@
             <h1>Payload IOVs</h1>
             <p>All intervals of validity in the database</p>
           </div>
-          <Toolbar search={sf.search} setSearch={sf.setSearch} placeholder="Search by URL, list, tag, or type..." count={sf.filtered.length} />
+          <Toolbar search={t.search} setSearch={t.setSearch} placeholder="Search by URL or payload list..." count={t.count} onRefresh={t.reload} loading={t.loading} />
           <div className="table-wrapper">
-            {loading ? <LoadingState message="Loading IOVs..." /> :
-             error ? <div className="error-msg">Failed to load: {error}</div> :
-             allIovs.length === 0 ? <div className="empty-msg">No IOVs found</div> : (
+            {!t.ready ? <LoadingState message="Loading IOVs..." /> :
+             t.error ? <div className="error-msg">Failed to load: {t.error}</div> :
+             t.count === 0 ? <div className="empty-msg">No IOVs found</div> : (
               <>
                 <div className="table-scroll">
                   <table>
-                    <SortHeader columns={columns} sortField={sf.sortField} sortDir={sf.sortDir} onSort={sf.handleSort} />
+                    <SortHeader columns={columns} sortField={t.sortField} sortDir={t.sortDir} onSort={t.handleSort} />
                     <tbody>
-                      {sf.pageData.map(iov => (
+                      {t.rows.map(iov => (
                         <tr key={iov.id}>
                           <td className="mono">{iov.id}</td>
                           <td style={{fontWeight: 500}}>{iov.payload_url}</td>
-                          <td><Link to={`/payloadlists/${encodeURIComponent(iov.payload_list_name)}`} className="cell-link">{iov.payload_list_name}</Link></td>
-                          <td>{iov.global_tag !== '—' ? <Link to={`/globaltags/${encodeURIComponent(iov.global_tag)}`} className="cell-link">{iov.global_tag}</Link> : '—'}</td>
-                          <td>{iov.payload_type !== '—' ? <Link to={`/payloadtypes/${encodeURIComponent(iov.payload_type)}`} className="cell-link">{iov.payload_type}</Link> : '—'}</td>
+                          <td>{iov.payload_list ? <Link to={`/payloadlists/${encodeURIComponent(iov.payload_list)}`} className="cell-link">{iov.payload_list}</Link> : '—'}</td>
+                          <td>{iov.global_tag ? <Link to={`/globaltags/${encodeURIComponent(iov.global_tag)}`} className="cell-link">{iov.global_tag}</Link> : '—'}</td>
+                          <td>{iov.payload_type ? <Link to={`/payloadtypes/${encodeURIComponent(iov.payload_type)}`} className="cell-link">{iov.payload_type}</Link> : '—'}</td>
                           <td className="mono">{iov.major_iov}</td>
                           <td className="mono">{iov.minor_iov}</td>
                           <td className="mono">{iov.major_iov_end}</td>
@@ -1143,7 +1179,7 @@
                     </tbody>
                   </table>
                 </div>
-                <Pagination {...sf} />
+                <Pagination page={t.page} totalPages={t.totalPages} setPage={t.setPage} filtered={t.rows} count={t.count} pageSize={t.pageSize} setPageSize={t.setPageSize} />
               </>
             )}
           </div>

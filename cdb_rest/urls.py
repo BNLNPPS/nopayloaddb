@@ -12,6 +12,7 @@ from cdb_rest.views import GlobalTagCloneAPIView
 from cdb_rest.views import CDBSettingAPIView
 from cdb_rest.views import TimeoutListAPIView
 from cdb_rest.views import cdb_web_view
+from cdb_rest.views import PayloadListByNameAPIView
 
 app_name = 'cdb_rest'
 
@@ -63,6 +64,7 @@ urlpatterns = [
     path('payload-types/<str:payloadTypeName>/delete', PayloadTypeDeleteAPIView.as_view(), name="payload_type_delete_alias"),
     path('payload-lists', PayloadListListCreationAPIView.as_view(), name="payload_lists_alias"),
     path('payload-lists/<int:pk>', PayloadListDetailAPIView.as_view(), name="payload_list_detail_alias"),
+    path('payload-lists/by-name/<str:payloadListName>', PayloadListByNameAPIView.as_view(), name="payload_list_by_name"),
     path('payload-lists/attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach_alias"),
     path('payload-lists/<str:payloadListName>/delete', PayloadListDeleteAPIView.as_view(), name="payload_list_delete_alias"),
     path('payload-iovs', PayloadIOVListCreationAPIView.as_view(), name="payload_iovs_alias"),

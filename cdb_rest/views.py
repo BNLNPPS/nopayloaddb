@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction, connections
-from django.db.models import Prefetch, Q, Max
+from django.db.models import Prefetch, Q, Max, Count
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, render
 
@@ -26,7 +26,9 @@ from cdb_rest.serializers import (
     GlobalTagStatusSerializer, GlobalTagListSerializer,
     PayloadListCreateSerializer, PayloadListReadSerializer,
     PayloadTypeSerializer, PayloadIOVSerializer,
-    PayloadListSerializer, PayloadListReadShortSerializer
+    PayloadListSerializer, PayloadListReadShortSerializer,
+    GlobalTagBrowseSerializer, PayloadListBrowseSerializer,
+    PayloadIOVBrowseSerializer
 )
 import cdb_rest.queries
 from .iov_comparisons import get_iov_config, compute_comb_iov
@@ -43,6 +45,50 @@ class WriteAuthMixin:
         return []
 
 
+def paginate_browse(request, queryset, serializer_class, search_fields, sort_map, default_sort):
+    """Server-side search/sort/pagination for browse endpoints (opt-in via ?page=).
+
+    Returns {count, page, page_size, total_pages, results}. Sort fields are
+    whitelisted through sort_map to prevent ordering by arbitrary columns.
+    """
+    params = request.query_params
+
+    search = params.get('search', '').strip()
+    if search:
+        q = Q()
+        for field in search_fields:
+            q |= Q(**{field + '__icontains': search})
+        queryset = queryset.filter(q)
+
+    sort = params.get('sort', default_sort)
+    sort_field = sort_map.get(sort, sort_map[default_sort])
+    if params.get('order', 'asc') == 'desc':
+        sort_field = '-' + sort_field
+    queryset = queryset.order_by(sort_field, 'pk')
+
+    try:
+        page = max(1, int(params.get('page', 1)))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        page_size = min(1000, max(1, int(params.get('page_size', 25))))
+    except (TypeError, ValueError):
+        page_size = 25
+
+    total = queryset.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    start = (page - 1) * page_size
+    serializer = serializer_class(queryset[start:start + page_size], many=True)
+
+    return Response({
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "results": serializer.data,
+    })
+
+
 # ── GlobalTag views ──────────────────────────────────────────────────────────
 
 class GlobalTagDetailAPIView(WriteAuthMixin, RetrieveAPIView):
@@ -51,6 +97,11 @@ class GlobalTagDetailAPIView(WriteAuthMixin, RetrieveAPIView):
 
 
 class GlobalTagByNameDetailAPIView(WriteAuthMixin, RetrieveAPIView):
+    """Retrieve a GlobalTag by name with all nested PayloadLists and IOVs.
+
+    Pass ?light=1 to get metadata only (no nested payload lists),
+    with payload list / IOV counts computed in the database.
+    """
     serializer_class = GlobalTagReadSerializer
     queryset = GlobalTag.objects.all()
     lookup_url_kwarg = 'globalTagName'
@@ -60,6 +111,17 @@ class GlobalTagByNameDetailAPIView(WriteAuthMixin, RetrieveAPIView):
         queryset = GlobalTag.objects.all()
         obj = get_object_or_404(queryset, name=gt_name)
         return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        if 'light' in request.query_params:
+            obj = get_object_or_404(
+                GlobalTag.objects.select_related('status').annotate(
+                    payload_lists_count=Count('payload_lists', distinct=True),
+                    payload_iov_count=Count('payload_lists__payload_iov', distinct=True),
+                ),
+                name=self.kwargs.get('globalTagName'))
+            return Response(GlobalTagBrowseSerializer(obj).data)
+        return super().retrieve(request, *args, **kwargs)
 
 
 class TimeoutListAPIView(WriteAuthMixin, ListAPIView):
@@ -257,13 +319,37 @@ class PayloadListDeleteAPIView(WriteAuthMixin, DestroyAPIView):
 # ── List views ───────────────────────────────────────────────────────────────
 
 class GlobalTagsListAPIView(WriteAuthMixin, ListAPIView):
-    """List all GlobalTags with attached PayloadLists summary."""
+    """List all GlobalTags with attached PayloadLists summary.
+
+    Pass ?page= to get a paginated response with server-side search
+    (?search=), status filter (?status=) and sorting (?sort=&order=).
+    """
     serializer_class = GlobalTagListSerializer
 
     def get_queryset(self):
         return GlobalTag.objects.all()
 
     def list(self, request):
+        if 'page' in request.query_params:
+            queryset = GlobalTag.objects.select_related('status').annotate(
+                payload_lists_count=Count('payload_lists', distinct=True),
+                payload_iov_count=Count('payload_lists__payload_iov', distinct=True),
+            )
+            status_name = request.query_params.get('status')
+            if status_name:
+                queryset = queryset.filter(status__name=status_name)
+            return paginate_browse(
+                request, queryset, GlobalTagBrowseSerializer,
+                search_fields=('name', 'author'),
+                sort_map={
+                    'id': 'id', 'name': 'name', 'author': 'author',
+                    'status': 'status__name',
+                    'payload_lists_count': 'payload_lists_count',
+                    'payload_iov_count': 'payload_iov_count',
+                    'created': 'created', 'updated': 'updated',
+                },
+                default_sort='name',
+            )
         queryset = self.get_queryset()
         serializer = GlobalTagListSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -320,7 +406,12 @@ class GlobalTagStatusCreationAPIView(WriteAuthMixin, ListCreateAPIView):
 # ── Creation views ───────────────────────────────────────────────────────────
 
 class PayloadListListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
-    """List all PayloadLists (GET) or create a new one (POST). Auto-generates name from PayloadType + sequence ID."""
+    """List all PayloadLists (GET) or create a new one (POST). Auto-generates name from PayloadType + sequence ID.
+
+    Pass ?page= to get a paginated response without nested IOVs, with
+    server-side search (?search=), filters (?global_tag=, ?payload_type=)
+    and sorting (?sort=&order=).
+    """
     serializer_class = PayloadListCreateSerializer
 
     @staticmethod
@@ -331,6 +422,27 @@ class PayloadListListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         return PayloadList.objects.all()
 
     def list(self, request):
+        if 'page' in request.query_params:
+            queryset = PayloadList.objects.select_related('global_tag', 'payload_type').annotate(
+                iov_count=Count('payload_iov'),
+            )
+            gt_name = request.query_params.get('global_tag')
+            if gt_name:
+                queryset = queryset.filter(global_tag__name=gt_name)
+            pt_name = request.query_params.get('payload_type')
+            if pt_name:
+                queryset = queryset.filter(payload_type__name=pt_name)
+            return paginate_browse(
+                request, queryset, PayloadListBrowseSerializer,
+                search_fields=('name', 'global_tag__name', 'payload_type__name'),
+                sort_map={
+                    'id': 'id', 'name': 'name',
+                    'global_tag': 'global_tag__name',
+                    'payload_type': 'payload_type__name',
+                    'iov_count': 'iov_count', 'created': 'created',
+                },
+                default_sort='name',
+            )
         queryset = self.get_queryset()
         serializer = PayloadListReadSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -370,14 +482,37 @@ class PayloadListDetailAPIView(WriteAuthMixin, RetrieveAPIView):
     queryset = PayloadList.objects.all()
 
 
+class PayloadListByNameAPIView(WriteAuthMixin, RetrieveAPIView):
+    """Retrieve a PayloadList by name (metadata + IOV count, no nested IOVs)."""
+    serializer_class = PayloadListBrowseSerializer
+
+    def get_object(self):
+        return get_object_or_404(
+            PayloadList.objects.select_related('global_tag', 'payload_type').annotate(
+                iov_count=Count('payload_iov'),
+            ),
+            name=self.kwargs.get('payloadListName'))
+
+
 class PayloadTypeListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
-    """List all PayloadTypes (GET) or create a new one (POST)."""
+    """List all PayloadTypes (GET) or create a new one (POST).
+
+    Pass ?page= to get a paginated response with server-side search
+    (?search=) and sorting (?sort=&order=).
+    """
     serializer_class = PayloadTypeSerializer
 
     def get_queryset(self):
         return PayloadType.objects.all()
 
     def list(self, request):
+        if 'page' in request.query_params:
+            return paginate_browse(
+                request, PayloadType.objects.all(), PayloadTypeSerializer,
+                search_fields=('name',),
+                sort_map={'id': 'id', 'name': 'name', 'created': 'created'},
+                default_sort='name',
+            )
         queryset = self.get_queryset()
         serializer = PayloadTypeSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -397,13 +532,45 @@ class PayloadTypeListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
 
 
 class PayloadIOVListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
-    """List all PayloadIOVs (GET) or create a new one (POST). Validates IOV ranges based on CDB_IOV_MODE."""
+    """List all PayloadIOVs (GET) or create a new one (POST). Validates IOV ranges based on CDB_IOV_MODE.
+
+    Pass ?page= to get a paginated response of flat rows including payload
+    list / global tag / payload type names, with server-side search
+    (?search=), filters (?payload_list=, ?global_tag=, ?payload_type=)
+    and sorting (?sort=&order=).
+    """
     serializer_class = PayloadIOVSerializer
 
     def get_queryset(self):
         return PayloadIOV.objects.all()
 
     def list(self, request):
+        if 'page' in request.query_params:
+            queryset = PayloadIOV.objects.select_related(
+                'payload_list__global_tag', 'payload_list__payload_type')
+            pl_name = request.query_params.get('payload_list')
+            if pl_name:
+                queryset = queryset.filter(payload_list__name=pl_name)
+            gt_name = request.query_params.get('global_tag')
+            if gt_name:
+                queryset = queryset.filter(payload_list__global_tag__name=gt_name)
+            pt_name = request.query_params.get('payload_type')
+            if pt_name:
+                queryset = queryset.filter(payload_list__payload_type__name=pt_name)
+            return paginate_browse(
+                request, queryset, PayloadIOVBrowseSerializer,
+                search_fields=('payload_url', 'payload_list__name'),
+                sort_map={
+                    'id': 'id', 'payload_url': 'payload_url', 'checksum': 'checksum',
+                    'major_iov': 'major_iov', 'minor_iov': 'minor_iov',
+                    'major_iov_end': 'major_iov_end', 'minor_iov_end': 'minor_iov_end',
+                    'payload_list': 'payload_list__name',
+                    'global_tag': 'payload_list__global_tag__name',
+                    'payload_type': 'payload_list__payload_type__name',
+                    'inserted': 'inserted',
+                },
+                default_sort='id',
+            )
         queryset = self.get_queryset()
         serializer = PayloadIOVSerializer(queryset, many=True)
         return Response(serializer.data)
