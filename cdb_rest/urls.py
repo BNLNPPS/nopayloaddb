@@ -11,6 +11,7 @@ from cdb_rest.views import GlobalTagDeleteAPIView, PayloadIOVDeleteAPIView, Payl
 from cdb_rest.views import GlobalTagCloneAPIView
 from cdb_rest.views import CDBSettingAPIView
 from cdb_rest.views import TimeoutListAPIView
+from cdb_rest.query_optimization.api_views import SuggestionListAPIView, SuggestionDetailAPIView
 
 app_name = 'cdb_rest'
 
@@ -48,5 +49,8 @@ urlpatterns = [
     path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
     path('user_settings/<str:name>/', CDBSettingAPIView.as_view()),
     path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
+
+    path('ai/suggestions/', SuggestionListAPIView.as_view(), name="ai_suggestions"),
+    path('ai/suggestions/<int:pk>/', SuggestionDetailAPIView.as_view(), name="ai_suggestion_detail"),
 
 ]

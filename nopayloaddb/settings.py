@@ -229,6 +229,11 @@ PERMISSION_PLUGIN_CLASS = os.environ.get(
     'cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin'
 )
 
+# AI optimizer: the DATABASES alias where the ai_optimizer schema lives.
+# Shared by the collector, tuner, and suggestions API so all three agree on
+# where to read/write without hardcoding the alias in three places.
+CDB_AI_OPTIMIZER_DB_ALIAS = os.environ.get('CDB_AI_OPTIMIZER_DB_ALIAS', 'read_db_1')
+
 # AI optimizer: LLM backend selection (Layer 3 of the analysis engine).
 # '' (default) disables LLM escalation entirely -- the rule engine still runs.
 CDB_LLM_BACKEND = os.environ.get('CDB_LLM_BACKEND', '')

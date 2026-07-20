@@ -13,6 +13,7 @@ from cdb_rest.query_optimization.explain_plan_rule_engine import (
 )
 from cdb_rest.query_optimization.llm_analyzer import analyze_with_llm
 from cdb_rest.query_optimization.llm_backend import get_llm_backend
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.utils import timezone
@@ -24,7 +25,7 @@ class Command(BaseCommand):
     help = "Collect slow queries from pg_stat_statements and persist EXPLAIN plans"
 
     def add_arguments(self, parser):
-        parser.add_argument("--db-alias", default="read_db_1")
+        parser.add_argument("--db-alias", default=settings.CDB_AI_OPTIMIZER_DB_ALIAS)
         parser.add_argument("--interval", type=int, default=60)
         parser.add_argument("--min-mean-ms", type=float, default=100.0)
         parser.add_argument("--min-calls", type=int, default=5)
