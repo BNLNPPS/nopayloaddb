@@ -13,9 +13,6 @@ Nopayloaddb provides a RESTful API for managing global tags, payload types, payl
 Quick Start
 ===========
 
-.. note::
-   **Try it now**: If you have Nopayloaddb running locally, you can test these examples immediately!
-
 **Base URL**
 
 All API endpoints are prefixed with ``/api/cdb_rest/``. For example:
@@ -41,7 +38,7 @@ Verify your installation with this simple command:
 
 .. code-block:: bash
 
-   curl http://localhost:8000/api/cdb_rest/gt
+   curl http://localhost:8000/api/cdb_rest/global-tags
 
 **Response Formats**
 
@@ -98,15 +95,17 @@ Global Tags represent named collections of payload versions for consistent condi
 List All Global Tags
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/globalTags
+.. http:get:: /api/cdb_rest/global-tags
 
    Retrieve a list of all global tags in the system.
+
+   **Alias of:** ``GET /api/cdb_rest/globalTags`` (legacy path)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/globalTags
+      curl http://localhost:8000/api/cdb_rest/global-tags
 
    **Example Response:**
 
@@ -126,9 +125,11 @@ List All Global Tags
 Get Global Tag by Name
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/globalTag/(str:name)
+.. http:get:: /api/cdb_rest/global-tags/(str:name)
 
    Retrieve detailed information about a specific global tag.
+
+   **Alias of:** ``GET /api/cdb_rest/globalTag/(str:name)`` (legacy path)
 
    :param name: Global tag name
    :type name: string
@@ -137,7 +138,7 @@ Get Global Tag by Name
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/globalTag/sPHENIX_ExampleGT_24
+      curl http://localhost:8000/api/cdb_rest/global-tags/sPHENIX_ExampleGT_24
 
    **Example Response:**
 
@@ -204,9 +205,11 @@ Create Global Tag
 Clone Global Tag
 ~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/cloneGlobalTag/(str:source_name)/(str:target_name)
+.. http:post:: /api/cdb_rest/global-tags/(str:source_name)/clone/(str:target_name)
 
    Create a copy of an existing global tag with all its payload lists.
+
+   **Alias of:** ``POST /api/cdb_rest/cloneGlobalTag/(str:source_name)/(str:target_name)`` (legacy path)
 
    :param source_name: Name of the global tag to clone
    :param target_name: Name for the new global tag
@@ -217,14 +220,16 @@ Clone Global Tag
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/cloneGlobalTag/sPHENIX_ExampleGT_24/sPHENIX_ExampleGT_25
+      curl -X POST http://localhost:8000/api/cdb_rest/global-tags/sPHENIX_ExampleGT_24/clone/sPHENIX_ExampleGT_25
 
 Change Global Tag Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:put:: /api/cdb_rest/gt_change_status/(str:name)/(str:newStatus)
+.. http:put:: /api/cdb_rest/global-tags/(str:name)/change-status/(str:newStatus)
 
    Update the status of a global tag
+
+   **Alias of:** ``PUT /api/cdb_rest/gt_change_status/(str:name)/(str:newStatus)`` (legacy path)
 
    :param name: Global tag name
    :param newStatus: New status **name** — must be an existing GlobalTagStatus
@@ -235,7 +240,7 @@ Change Global Tag Status
 
    .. code-block:: bash
 
-      curl -X PUT http://localhost:8000/api/cdb_rest/gt_change_status/MyNewGT_v1.0/locked
+      curl -X PUT http://localhost:8000/api/cdb_rest/global-tags/MyNewGT_v1.0/change-status/locked
 
    **Status semantics:**
 
@@ -246,9 +251,11 @@ Change Global Tag Status
 Delete Global Tag
 ~~~~~~~~~~~~~~~~~
 
-.. http:delete:: /api/cdb_rest/deleteGlobalTag/(str:name)
+.. http:delete:: /api/cdb_rest/global-tags/(str:name)/delete
 
    Delete a global tag and all associated payload lists.
+
+   **Alias of:** ``DELETE /api/cdb_rest/deleteGlobalTag/(str:name)`` (legacy path)
 
    :param name: Global tag name
    :type name: string
@@ -257,7 +264,7 @@ Delete Global Tag
 
    .. code-block:: bash
 
-      curl -X DELETE http://localhost:8000/api/cdb_rest/deleteGlobalTag/MyNewGT_v1.0
+      curl -X DELETE http://localhost:8000/api/cdb_rest/global-tags/MyNewGT_v1.0/delete
 
    .. warning::
       This operation is irreversible and will delete all associated payload lists!
@@ -268,16 +275,18 @@ Delete Global Tag
 Global Tag Status Management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/gtstatus
-.. http:post:: /api/cdb_rest/gtstatus
+.. http:get:: /api/cdb_rest/global-tags/statuses
+.. http:post:: /api/cdb_rest/global-tags/statuses
 
    Manage global tag status definitions.
+
+   **Alias of:** ``GET/POST /api/cdb_rest/gtstatus`` (legacy path)
 
    **Example Request (GET):**
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/gtstatus
+      curl http://localhost:8000/api/cdb_rest/global-tags/statuses
 
 Payload Type Endpoints
 ======================
@@ -287,15 +296,17 @@ Payload Types define categories and structures for different kinds of conditions
 List Payload Types
 ~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/pt
+.. http:get:: /api/cdb_rest/payload-types
 
    Retrieve all payload types.
+
+   **Alias of:** ``GET /api/cdb_rest/pt`` (legacy path)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/pt
+      curl http://localhost:8000/api/cdb_rest/payload-types
 
    **Example Response:**
 
@@ -317,9 +328,11 @@ List Payload Types
 Create Payload Type
 ~~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/pt
+.. http:post:: /api/cdb_rest/payload-types
 
    Create a new payload type.
+
+   **Alias of:** ``POST /api/cdb_rest/pt`` (legacy path)
 
    :<json string name: Payload type name (required, unique)
    :<json string description: Description of the payload type (optional)
@@ -328,7 +341,7 @@ Create Payload Type
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/pt \
+      curl -X POST http://localhost:8000/api/cdb_rest/payload-types \
         -H "Content-Type: application/json" \
         -d '{
           "name": "CEMC_Calibration",
@@ -338,9 +351,11 @@ Create Payload Type
 Delete Payload Type
 ~~~~~~~~~~~~~~~~~~~
 
-.. http:delete:: /api/cdb_rest/deletePayloadType/(str:name)
+.. http:delete:: /api/cdb_rest/payload-types/(str:name)/delete
 
    Delete a payload type.
+
+   **Alias of:** ``DELETE /api/cdb_rest/deletePayloadType/(str:name)`` (legacy path)
 
    :param name: Payload type name
    :type name: string
@@ -349,7 +364,7 @@ Delete Payload Type
 
    .. code-block:: bash
 
-      curl -X DELETE http://localhost:8000/api/cdb_rest/deletePayloadType/CEMC_Calibration
+      curl -X DELETE http://localhost:8000/api/cdb_rest/payload-types/CEMC_Calibration/delete
 
 Payload List Endpoints
 ======================
@@ -359,22 +374,26 @@ Payload Lists link Global Tags to Payload Types and serve as containers for payl
 List Payload Lists
 ~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/pl
+.. http:get:: /api/cdb_rest/payload-lists
 
    Retrieve all payload lists.
+
+   **Alias of:** ``GET /api/cdb_rest/pl`` (legacy path)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/pl
+      curl http://localhost:8000/api/cdb_rest/payload-lists
 
 Get Payload Lists for Global Tag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/gtPayloadLists/(str:gt_name)
+.. http:get:: /api/cdb_rest/global-tags/(str:gt_name)/payload-lists
 
    Retrieve all payload lists associated with a specific global tag.
+
+   **Alias of:** ``GET /api/cdb_rest/gtPayloadLists/(str:gt_name)`` (legacy path)
 
    :param gt_name: Global tag name
    :type gt_name: string
@@ -383,16 +402,18 @@ Get Payload Lists for Global Tag
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/gtPayloadLists/sPHENIX_ExampleGT_24
+      curl http://localhost:8000/api/cdb_rest/global-tags/sPHENIX_ExampleGT_24/payload-lists
 
 Create Payload List
 ~~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/pl
+.. http:post:: /api/cdb_rest/payload-lists
 
    Create a new payload list. The name is **auto-generated** from the payload type name and
    an internal sequence ID (e.g. ``CEMC_Calibration_42``); the list is created detached
-   (``global_tag: null``) and must be attached with ``pl_attach``.
+   (``global_tag: null``) and must be attached with ``payload-lists/attach``.
+
+   **Alias of:** ``POST /api/cdb_rest/pl`` (legacy path)
 
    :<json string payload_type: Payload type **name** (required) — must be an existing PayloadType
 
@@ -400,7 +421,7 @@ Create Payload List
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/pl \
+      curl -X POST http://localhost:8000/api/cdb_rest/payload-lists \
         -H "Content-Type: application/json" \
         -d '{
           "payload_type": "CEMC_Calibration"
@@ -418,14 +439,46 @@ Create Payload List
         "created": "2026-01-15T10:30:00.000000Z"
       }
 
+Get Payload List by Name
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. http:get:: /api/cdb_rest/payload-lists/by-name/(str:name)
+
+   Retrieve a payload list's metadata by name, including the number of attached payload
+   IOVs (``iov_count``). Nested IOVs are not included. This endpoint has no legacy path.
+
+   :param name: Payload list name
+   :type name: string
+
+   **Example Request:**
+
+   .. code-block:: bash
+
+      curl http://localhost:8000/api/cdb_rest/payload-lists/by-name/Beam_210
+
+   **Example Response:**
+
+   .. code-block:: json
+
+      {
+        "id": 210,
+        "name": "Beam_210",
+        "global_tag": "sPHENIX_ExampleGT_24",
+        "payload_type": "Beam",
+        "iov_count": 12,
+        "created": "2022-02-21T15:10:00.000000Z"
+      }
+
 Attach Payload List to Global Tag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:put:: /api/cdb_rest/pl_attach
+.. http:put:: /api/cdb_rest/payload-lists/attach
 
    Attach an existing payload list to a global tag. If the global tag already has a payload
    list of the same payload type, that list is detached first. Rejected if the global tag is
    ``frozen``, or if it is ``locked`` and a list of the same type is already attached.
+
+   **Alias of:** ``PUT /api/cdb_rest/pl_attach`` (legacy path)
 
    :<json string global_tag: Global tag name (required)
    :<json string payload_list: Payload list name (required)
@@ -434,7 +487,7 @@ Attach Payload List to Global Tag
 
    .. code-block:: bash
 
-      curl -X PUT http://localhost:8000/api/cdb_rest/pl_attach \
+      curl -X PUT http://localhost:8000/api/cdb_rest/payload-lists/attach \
         -H "Content-Type: application/json" \
         -d '{
           "global_tag": "sPHENIX_ExampleGT_24",
@@ -444,9 +497,11 @@ Attach Payload List to Global Tag
 Delete Payload List
 ~~~~~~~~~~~~~~~~~~~
 
-.. http:delete:: /api/cdb_rest/deletePayloadList/(str:name)
+.. http:delete:: /api/cdb_rest/payload-lists/(str:name)/delete
 
    Delete a payload list and all associated payload IOVs.
+
+   **Alias of:** ``DELETE /api/cdb_rest/deletePayloadList/(str:name)`` (legacy path)
 
    :param name: Payload list name
    :type name: string
@@ -455,7 +510,7 @@ Delete Payload List
 
    .. code-block:: bash
 
-      curl -X DELETE http://localhost:8000/api/cdb_rest/deletePayloadList/CEMC_Calibration_v1.0
+      curl -X DELETE http://localhost:8000/api/cdb_rest/payload-lists/CEMC_Calibration_v1.0/delete
 
 Payload IOV Endpoints
 =====================
@@ -465,12 +520,14 @@ Payload IOVs (Intervals of Validity) represent individual conditions data entrie
 Main Payload Query Endpoint
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:get:: /api/cdb_rest/payloadiovs/
+.. http:get:: /api/cdb_rest/payload-iovs/query/
 
    **Primary endpoint** for querying payload IOVs. For each payload list attached to the
    global tag, it returns the latest payload IOV whose start is at or before the requested
    IOV point. The query runs as raw SQL for performance and is distributed randomly across
    the configured read replica databases.
+
+   **Alias of:** ``GET /api/cdb_rest/payloadiovs/`` (legacy path)
 
    :query gtName: Global tag name (required)
    :query majorIOV: Major IOV value (required)
@@ -482,10 +539,10 @@ Main Payload Query Endpoint
    .. code-block:: bash
 
       # Default (positional rows)
-      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999'
+      curl 'http://localhost:8000/api/cdb_rest/payload-iovs/query/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999'
 
       # Dictionary-shaped response
-      curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
+      curl 'http://localhost:8000/api/cdb_rest/payload-iovs/query/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
 
    **Example Response (default):**
 
@@ -525,12 +582,14 @@ Main Payload Query Endpoint
 Create Payload IOV
 ~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/piov
+.. http:post:: /api/cdb_rest/payload-iovs
 
    Create a single payload IOV. The IOV is created **detached** — associate it with a
-   payload list afterwards using ``piov_attach``. If the end values are omitted they default
-   to ``sys.maxsize`` (open-ended IOV). A combined IOV
+   payload list afterwards using ``payload-iovs/attach``. If the end values are omitted they
+   default to ``sys.maxsize`` (open-ended IOV). A combined IOV
    (``comb_iov = major_iov + minor_iov / 10^19``) is computed automatically.
+
+   **Alias of:** ``POST /api/cdb_rest/piov`` (legacy path)
 
    :<json string payload_url: URL/path to payload file (required)
    :<json string checksum: File checksum (required)
@@ -552,7 +611,7 @@ Create Payload IOV
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/piov \
+      curl -X POST http://localhost:8000/api/cdb_rest/payload-iovs \
         -H "Content-Type: application/json" \
         -d '{
           "payload_url": "calibration_data_v1.2.root",
@@ -584,20 +643,22 @@ Create Payload IOV
 Bulk Create Payload IOVs
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:post:: /api/cdb_rest/bulk_piov
+.. http:post:: /api/cdb_rest/payload-iovs/bulk
 
    Create multiple payload IOVs in a single operation for improved performance. Unlike
-   ``piov``, each entry is attached directly to a payload list (by name), end IOVs are always
-   set to ``sys.maxsize`` (open-ended), and individual range validation is skipped.
+   ``payload-iovs``, each entry is attached directly to a payload list (by name), end IOVs
+   are always set to ``sys.maxsize`` (open-ended), and individual range validation is skipped.
 
    Each array element requires ``payload_url``, ``major_iov``, ``minor_iov`` and
    ``payload_list`` (payload list **name**).
+
+   **Alias of:** ``POST /api/cdb_rest/bulk_piov`` (legacy path)
 
    **Example Request:**
 
    .. code-block:: bash
 
-      curl -X POST http://localhost:8000/api/cdb_rest/bulk_piov \
+      curl -X POST http://localhost:8000/api/cdb_rest/payload-iovs/bulk \
         -H "Content-Type: application/json" \
         -d '[
           {
@@ -617,7 +678,7 @@ Bulk Create Payload IOVs
 Attach Payload IOV to List
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. http:put:: /api/cdb_rest/piov_attach
+.. http:put:: /api/cdb_rest/payload-iovs/attach
 
    Attach an existing payload IOV to a payload list, resolving overlaps with the IOVs
    already in the list:
@@ -632,6 +693,8 @@ Attach Payload IOV to List
 
    Overlap comparisons honor the configured ``CDB_IOV_MODE`` (see :ref:`iov-modes`).
 
+   **Alias of:** ``PUT /api/cdb_rest/piov_attach`` (legacy path)
+
    :<json string payload_list: Payload list name (required)
    :<json int piov_id: Payload IOV ID (required)
 
@@ -639,7 +702,7 @@ Attach Payload IOV to List
 
    .. code-block:: bash
 
-      curl -X PUT http://localhost:8000/api/cdb_rest/piov_attach \
+      curl -X PUT http://localhost:8000/api/cdb_rest/payload-iovs/attach \
         -H "Content-Type: application/json" \
         -d '{
           "payload_list": "Beam_210",
@@ -649,28 +712,32 @@ Attach Payload IOV to List
 Delete Payload IOV
 ~~~~~~~~~~~~~~~~~~
 
-.. http:delete:: /api/cdb_rest/deletePayloadIOV/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)
+.. http:delete:: /api/cdb_rest/payload-iovs/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)/delete
 
    Delete a specific payload IOV.
+
+   **Alias of:** ``DELETE /api/cdb_rest/deletePayloadIOV/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)`` (legacy path)
 
    :param gtName: Global tag name
    :param payloadType: Payload type name
    :param majorIOV: Major IOV value
    :param minorIOV: Minor IOV value
 
-.. http:delete:: /api/cdb_rest/deletePayloadIOV/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)/(int:majorIOVEnd)/(int:minorIOVEnd)
+.. http:delete:: /api/cdb_rest/payload-iovs/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)/(int:majorIOVEnd)/(int:minorIOVEnd)/delete
 
    Delete payload IOVs in a range.
+
+   **Alias of:** ``DELETE /api/cdb_rest/deletePayloadIOV/(str:gtName)/(str:payloadType)/(int:majorIOV)/(int:minorIOV)/(int:majorIOVEnd)/(int:minorIOVEnd)`` (legacy path)
 
    **Example Request:**
 
    .. code-block:: bash
 
       # Delete specific IOV
-      curl -X DELETE http://localhost:8000/api/cdb_rest/deletePayloadIOV/sPHENIX_ExampleGT_24/Beam/0/1000
+      curl -X DELETE http://localhost:8000/api/cdb_rest/payload-iovs/sPHENIX_ExampleGT_24/Beam/0/1000/delete
 
       # Delete range of IOVs
-      curl -X DELETE http://localhost:8000/api/cdb_rest/deletePayloadIOV/sPHENIX_ExampleGT_24/Beam/0/1000/0/2000
+      curl -X DELETE http://localhost:8000/api/cdb_rest/payload-iovs/sPHENIX_ExampleGT_24/Beam/0/1000/0/2000/delete
 
 .. _iov-modes:
 
@@ -686,8 +753,8 @@ startup.
    :header-rows: 1
 
    * - Mode
-     - Range validation (``piov``)
-     - Overlap handling (``piov_attach``)
+     - Range validation (``payload-iovs``)
+     - Overlap handling (``payload-iovs/attach``)
    * - ``continuous`` (default)
      - End IOV must be strictly greater than start IOV
      - Trimmed IOVs end exactly at the new IOV's start
@@ -698,10 +765,12 @@ startup.
 Settings Endpoint
 =================
 
-.. http:get:: /api/cdb_rest/user_settings/(str:name)/
+.. http:get:: /api/cdb_rest/settings/(str:name)/
 
    Read-only access to the server's ``CDB_*`` configuration values (all environment
    variables prefixed with ``CDB_``).
+
+   **Alias of:** ``GET /api/cdb_rest/user_settings/(str:name)/`` (legacy path)
 
    :param name: Setting name, e.g. ``CDB_IOV_MODE``
    :type name: string
@@ -710,7 +779,7 @@ Settings Endpoint
 
    .. code-block:: bash
 
-      curl http://localhost:8000/api/cdb_rest/user_settings/CDB_IOV_MODE/
+      curl http://localhost:8000/api/cdb_rest/settings/CDB_IOV_MODE/
 
    **Example Response:**
 
@@ -748,7 +817,7 @@ Get All Conditions for a Run
 .. code-block:: bash
 
    # Get all conditions for run 12345
-   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345'
+   curl 'http://localhost:8000/api/cdb_rest/payload-iovs/query/?gtName=Production_GT_v2.1&majorIOV=0&minorIOV=12345'
 
 List All Available Global Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -756,7 +825,7 @@ List All Available Global Tags
 .. code-block:: bash
 
    # See what global tags are available
-   curl http://localhost:8000/api/cdb_rest/globalTags | jq '.[].name'
+   curl http://localhost:8000/api/cdb_rest/global-tags | jq '.[].name'
 
 Error Handling
 ==============
@@ -835,22 +904,6 @@ Query Optimization
 Database Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-- The main ``/payloadiovs/`` endpoint is optimized for complex queries
+- The main ``/payload-iovs/query/`` endpoint is optimized for complex queries
 - Bulk operations are significantly faster than individual requests
 - Consider using read replicas for high-load query scenarios
-
-Integration Examples
-====================
-
-Python and shell client examples live in the :doc:`usage` guide.
-
-Next Steps
-==========
-
-- **Usage Examples**: See :doc:`usage` for practical workflow examples
-- **Development**: Check :doc:`development` for API development guidelines
-- **Architecture**: Learn about the system design in :doc:`architecture`
-- **Deployment**: Production API setup in :doc:`deployment`
-
-.. tip::
-   **Interactive API Exploration**: Once you have Nopayloaddb running, you can explore the API interactively by visiting http://localhost:8000/api/cdb_rest/ in your browser (if DRF browsable API is enabled).
