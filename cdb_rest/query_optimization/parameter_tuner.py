@@ -20,10 +20,9 @@ import hashlib
 from dataclasses import dataclass
 from typing import Optional
 
-from django.db import connections
-
 from . import storage
 from .explain_plan_rule_engine import Suggestion, validate_safe_sql
+from .pg_stats import buffer_hit_ratio as get_buffer_hit_ratio
 
 BUFFER_HIT_RATIO_THRESHOLD = 0.95
 BUFFER_HIT_RATIO_CONSECUTIVE_CYCLES = 3
@@ -167,8 +166,8 @@ class ParameterTuner:
         return stored
 
     def _gather_metrics(self) -> ClusterMetrics:
-        buffer_hit_ratio = self._buffer_hit_ratio()
-        storage.record_tuner_observation(self.db_alias, self.db_alias, buffer_hit_ratio)
+        hit_ratio = get_buffer_hit_ratio(self.db_alias)
+        storage.record_tuner_observation(self.db_alias, self.db_alias, hit_ratio)
         consecutive_low = storage.consecutive_low_buffer_cycles(
             self.db_alias,
             self.db_alias,
@@ -183,28 +182,11 @@ class ParameterTuner:
         ) > 0
 
         return ClusterMetrics(
-            buffer_hit_ratio=buffer_hit_ratio,
+            buffer_hit_ratio=hit_ratio,
             consecutive_low_buffer_cycles=consecutive_low,
             work_mem_spill_fires=work_mem_spill_fires,
             autovacuum_lag_fired=autovacuum_lag_fired,
         )
-
-    def _buffer_hit_ratio(self) -> Optional[float]:
-        sql = """
-            SELECT blks_hit, blks_read
-            FROM pg_stat_database
-            WHERE datname = current_database()
-        """
-        with connections[self.db_alias].cursor() as cursor:
-            cursor.execute(sql)
-            row = cursor.fetchone()
-        if not row:
-            return None
-        hit, read = float(row[0] or 0), float(row[1] or 0)
-        total = hit + read
-        if total <= 0:
-            return None
-        return hit / total
 
 
 def _parameter_suggestion_hash(suggestion: Suggestion) -> str:
