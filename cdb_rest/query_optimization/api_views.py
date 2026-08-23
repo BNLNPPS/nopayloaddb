@@ -1,22 +1,14 @@
-"""The /ai/suggestions/ REST API (proposal Section 7.6).
+"""The /ai/suggestions/ REST API.
 
-Every suggestion -- whether from the rule engine, the LLM layer, or the
-dynamic tuner -- moves through the same pending -> approved/rejected state
-machine. Approving a suggestion with immediately-appliable safe_sql executes
-it right away and transitions it to 'applied'; DDL-class safe_sql
-(CREATE INDEX CONCURRENTLY / REINDEX CONCURRENTLY) and advisory-only
-suggestions (no safe_sql, or CREATE TEMP TABLE) stay 'approved' -- the
-former picked up by the apply_approved_suggestions off-peak job, the latter
-requiring manual operator action.
-
-This module intentionally uses raw SQL against the ai_optimizer schema
-(like cdb_rest/views.py's PayloadIOVsSQLListAPIView) rather than Django
-models: ai_optimizer is explicitly outside Django's migration history
-(see storage.py), so there's nothing to declare a model against.
+Approving an immediately-appliable safe_sql executes it and moves the suggestion
+to 'applied'; DDL and advisory suggestions stay 'approved' for the off-peak job
+or manual action. Raw SQL rather than models, since ai_optimizer sits outside
+Django's migration history.
 """
 
 from django.conf import settings
 from django.db import connections
+from django.db.utils import ProgrammingError
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -24,14 +16,33 @@ from rest_framework.views import APIView
 
 from cdb_rest.views import WriteAuthMixin
 
-from . import apply
+from . import apply, storage
 
-VALID_STATUS_FILTERS = {"pending", "approved", "rejected", "applied"}
+VALID_STATUS_FILTERS = set(storage.SUGGESTION_STATUSES)
+
+# Only the review decision is a human PATCH; terminal states are earned by measurement.
 PATCH_ALLOWED_STATUSES = {"approved", "rejected"}
 
 
 def _db_alias():
     return settings.CDB_AI_OPTIMIZER_DB_ALIAS
+
+
+def _schema_out_of_date(exc):
+    """The ai_optimizer schema is outside Django's migration history, so a
+    deploy can leave the API reading columns the database does not have yet
+    (nothing applies the schema except the collector/tuner/benchmark, which
+    only run on their own schedule). Turn that into an actionable 503 rather
+    than an opaque 500."""
+    return Response(
+        {
+            "detail": "The ai_optimizer schema is missing or out of date on this "
+                      "database. Run `python manage.py ensure_ai_schema` against the "
+                      "primary and retry.",
+            "error": str(exc).strip().splitlines()[0] if str(exc).strip() else "",
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 def _row_to_dict(cursor, row):
@@ -55,7 +66,9 @@ class SuggestionListAPIView(WriteAuthMixin, APIView):
         sql = """
             SELECT id, plan_id, parameter_name, queryid, rule_id, category,
                    priority, message, safe_sql, confidence, source, status,
-                   created_at, updated_at, applied_at
+                   created_at, updated_at, applied_at, benchmarked_at,
+                   evaluated_at, evaluation_status, empirical_pct_change,
+                   latest_evaluation_id
             FROM ai_optimizer.suggestions
             WHERE 1 = 1
         """
@@ -68,33 +81,59 @@ class SuggestionListAPIView(WriteAuthMixin, APIView):
             params.append(category_filter)
         sql += " ORDER BY created_at DESC LIMIT 200"
 
-        with connections[_db_alias()].cursor() as cursor:
-            cursor.execute(sql, params)
-            rows = [_row_to_dict(cursor, row) for row in cursor.fetchall()]
+        try:
+            with connections[_db_alias()].cursor() as cursor:
+                cursor.execute(sql, params)
+                rows = [_row_to_dict(cursor, row) for row in cursor.fetchall()]
+        except ProgrammingError as exc:
+            return _schema_out_of_date(exc)
 
         return Response(rows)
 
 
 class SuggestionDetailAPIView(WriteAuthMixin, APIView):
-    """GET full detail (including the annotated plan tree, if any).
-    PATCH {"status": "approved" | "rejected"} to review a pending suggestion."""
+    """GET full detail including the plan tree; PATCH to approve or reject."""
 
     def get(self, request, pk):
         sql = """
             SELECT s.id, s.plan_id, s.parameter_name, s.queryid, s.rule_id,
                    s.category, s.priority, s.message, s.safe_sql, s.confidence,
                    s.source, s.status, s.created_at, s.updated_at, s.applied_at,
+                   s.benchmarked_at, s.evaluated_at, s.evaluation_status,
+                   s.empirical_pct_change, s.latest_evaluation_id,
                    p.plan_json, p.query_text, p.mean_exec_time
             FROM ai_optimizer.suggestions s
             LEFT JOIN ai_optimizer.explain_plans p ON p.id = s.plan_id
             WHERE s.id = %s
         """
-        with connections[_db_alias()].cursor() as cursor:
-            cursor.execute(sql, [pk])
-            row = cursor.fetchone()
-            if row is None:
-                return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-            result = _row_to_dict(cursor, row)
+        try:
+            with connections[_db_alias()].cursor() as cursor:
+                cursor.execute(sql, [pk])
+                row = cursor.fetchone()
+                if row is None:
+                    return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+                result = _row_to_dict(cursor, row)
+
+                # Measured evidence beside `confidence`, so disagreement is visible.
+                cursor.execute(
+                    """
+                    SELECT id, evaluated_at, verdict, latency_status, mechanism_status,
+                           primary_endpoint, baseline_p50_ms, baseline_p95_ms,
+                           baseline_spread_ms, optimized_p50_ms, optimized_p95_ms,
+                           optimized_spread_ms, pct_change_p95, noise_band_ms,
+                           exceeds_noise, repetitions, warmup_requests, workload_profile,
+                           experiment_mode, application_order, caveats, rationale,
+                           db_metric_deltas, plan_changes, postcondition
+                    FROM ai_optimizer.suggestion_evaluations
+                    WHERE suggestion_id = %s
+                    ORDER BY evaluated_at DESC
+                    LIMIT 10
+                    """,
+                    [pk],
+                )
+                result["evaluations"] = [_row_to_dict(cursor, r) for r in cursor.fetchall()]
+        except ProgrammingError as exc:
+            return _schema_out_of_date(exc)
 
         return Response(result)
 
@@ -107,11 +146,7 @@ class SuggestionDetailAPIView(WriteAuthMixin, APIView):
             )
 
         db_alias = _db_alias()
-        # 'approved' is reachable from 'pending' (the normal path) or from
-        # 'approved' itself (retrying a suggestion whose apply previously
-        # failed, per the 502 response below). 'rejected' is only reachable
-        # from 'pending' -- there's no take-back for an already-approved item
-        # through this endpoint.
+        # 'approved' is retryable after a failed apply; 'rejected' only from 'pending'.
         allowed_from = {"pending"} if new_status == "rejected" else {"pending", "approved"}
 
         with connections[db_alias].cursor() as cursor:
@@ -135,8 +170,20 @@ class SuggestionDetailAPIView(WriteAuthMixin, APIView):
                 [new_status, pk],
             )
 
-        if new_status != "approved" or not safe_sql:
+        if new_status != "approved":
             return Response({"id": pk, "status": new_status})
+
+        if not safe_sql:
+            # No SQL to run, so say so rather than leave the operator at "0/0 applied".
+            return Response({
+                "id": pk,
+                "status": "approved",
+                "applied": False,
+                "advisory": True,
+                "detail": "Advisory suggestion: it has no safe_sql, so nothing will be "
+                          "executed and apply_approved_suggestions will not pick it up. "
+                          "Acting on it requires the manual change described in `message`.",
+            })
 
         if apply.is_queued_ddl(safe_sql):
             return Response(
