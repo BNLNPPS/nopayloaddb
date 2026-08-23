@@ -414,7 +414,9 @@ class PayloadIOVListCreationAPIView(WriteAuthMixin, ListCreateAPIView):
         data = request.data
 
         plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "role": "createpayload", "name": self.kwargs['payload_url']}
+        # From the body: the 'piov' route has no URL params. '' not None, for re.fullmatch.
+        target_object = {"object": "GlobalTag", "role": "createpayload",
+                         "name": data.get('payload_url') or ''}
         if not plugin.has_permission(request, target_object):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -746,15 +748,17 @@ class PayloadIOVAttachAPIView(WriteAuthMixin, UpdateAPIView):
 
         data = request.data
 
-        plugin = load_permission_plugin()
-        target_object = {"object": "GlobalTag", "role": "createiov", "name": data['global_tag']}
-        if not plugin.has_permission(request, target_object):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             p_list = PayloadList.objects.get(name=data['payload_list'])
         except KeyError:
             return Response({"detail": "PayloadList not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # From p_list: the body has no global_tag, so the check runs after the lookup.
+        plugin = load_permission_plugin()
+        target_object = {"object": "GlobalTag", "role": "createiov",
+                         "name": p_list.global_tag.name if p_list.global_tag else ''}
+        if not plugin.has_permission(request, target_object):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         try:
             piov = PayloadIOV.objects.get(id=data['piov_id'])
         except KeyError:
