@@ -1,10 +1,7 @@
-"""Executes approved DDL-class suggestions (CREATE INDEX CONCURRENTLY /
-REINDEX CONCURRENTLY) against the primary.
+"""Apply approved DDL-class suggestions against the primary.
 
-These statements are never run synchronously from the suggestions API PATCH
-request -- they can take minutes on a large table. Instead, approving one
-via the API leaves it in 'approved' status, and this command (intended to be
-invoked by an off-peak CronJob, per the proposal's cron.yaml pattern) applies
+These can take minutes on a large table, so the API never runs them inline;
+approving leaves them 'approved' and this command (an off-peak CronJob) applies
 them and marks each 'applied'.
 """
 
@@ -30,12 +27,43 @@ class Command(BaseCommand):
 
         with connections[db_alias].cursor() as cursor:
             cursor.execute(
-                "SELECT id, safe_sql FROM ai_optimizer.suggestions WHERE status = 'approved' AND safe_sql IS NOT NULL"
+                "SELECT id, rule_id, safe_sql FROM ai_optimizer.suggestions WHERE status = 'approved'"
             )
             rows = cursor.fetchall()
 
-        queued = [(pk, sql) for pk, sql in rows if apply.is_queued_ddl(sql)]
+        queued = [(pk, sql) for pk, _rule, sql in rows if sql and apply.is_queued_ddl(sql)]
+        advisory = [(pk, rule) for pk, rule, sql in rows if not sql]
+        immediate = [(pk, rule) for pk, rule, sql in rows
+                     if sql and not apply.is_queued_ddl(sql)]
         applied_count = 0
+
+        # "0/0 applied" alone cannot say which case this is, so name it.
+        if not queued:
+            self.stdout.write("No approved suggestions with queued DDL to apply.")
+            if advisory:
+                self.stdout.write(
+                    "  {} approved suggestion(s) are ADVISORY (no safe_sql) and are never "
+                    "auto-applied: {}".format(
+                        len(advisory),
+                        ", ".join(f"id={pk} ({rule})" for pk, rule in advisory))
+                )
+                self.stdout.write(
+                    "  Approve one whose safe_sql is non-null -- for example a rule that "
+                    "emits CREATE INDEX CONCURRENTLY."
+                )
+            if immediate:
+                self.stdout.write(
+                    "  {} approved suggestion(s) were applied immediately at approval time "
+                    "and need no queued run: {}".format(
+                        len(immediate),
+                        ", ".join(f"id={pk} ({rule})" for pk, rule in immediate))
+                )
+            if not advisory and not immediate:
+                self.stdout.write(
+                    "  Nothing is in 'approved' status. PATCH a pending suggestion to "
+                    "{\"status\": \"approved\"} first."
+                )
+            return
 
         for pk, safe_sql in queued:
             self.stdout.write(f"applying suggestion id={pk}: {safe_sql}")

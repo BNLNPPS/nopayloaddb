@@ -10,10 +10,11 @@ cycles" checks, and handing results to storage.store_suggestion.
 
 Every parameter here is treated according to its actual PostgreSQL semantics
 rather than uniformly "SET": shared_buffers is PGC_POSTMASTER (requires a
-restart, so its suggestion is advisory-only, safe_sql=None); work_mem and
-random_page_cost are reloadable via ALTER SYSTEM SET + a reload; and
-autovacuum_vacuum_scale_factor for PayloadIOV is a per-table storage
-parameter, applied via ALTER TABLE ... SET (...).
+restart); work_mem and
+Cluster-wide GUCs are advisory: they carry the psql-conf ConfigMap change to
+make. ALTER SYSTEM SET is deliberately unused -- it writes postgresql.auto.conf,
+which silently overrides the ConfigMap. autovacuum_vacuum_scale_factor is a
+per-table catalog parameter, so ALTER TABLE is correct there and stays appliable.
 """
 
 import hashlib
@@ -30,7 +31,8 @@ WORK_MEM_SPILL_RULES = ("R3", "R4")
 WORK_MEM_SPILL_THRESHOLD = 5
 WORK_MEM_LOOKBACK_DAYS = 7
 AUTOVACUUM_SCALE_FACTOR_TARGET = 0.05
-RANDOM_PAGE_COST_TARGET = 1.1
+# 1.1 suits local NVMe; Ceph is network-attached, so sweep 1.1/1.5/2.0 with the harness.
+RANDOM_PAGE_COST_TARGET = 1.5
 
 
 @dataclass
@@ -74,9 +76,13 @@ def recommend_work_mem(metrics: ClusterMetrics) -> Optional[Suggestion]:
         message=(
             f"Hash/sort spill rules (R3/R4) fired {metrics.work_mem_spill_fires} "
             f"times in the last {WORK_MEM_LOOKBACK_DAYS} days. Recommend "
-            "increasing work_mem."
+            "increasing work_mem. Apply via the psql-conf ConfigMap "
+            "(work_mem = 64MB) and roll the StatefulSet -- replica first, then "
+            "primary. Not auto-applied: ALTER SYSTEM would write "
+            "postgresql.auto.conf, which outranks the ConfigMap and leaves the "
+            "chart describing configuration the server is not using."
         ),
-        safe_sql=validate_safe_sql("ALTER SYSTEM SET work_mem = '64MB';"),
+        safe_sql=None,  # advisory -- see message; ALTER SYSTEM would shadow the ConfigMap
         confidence=0.8,
         source="tuner",
         parameter_name="work_mem",
@@ -113,10 +119,12 @@ def recommend_random_page_cost() -> Suggestion:
         priority="LOW",
         message=(
             f"Recommend random_page_cost = {RANDOM_PAGE_COST_TARGET} to reflect "
-            "the SSD latency profile of Ceph-backed OKD persistent volumes "
-            "(default of 4.0 assumes spinning disks)."
+            "the latency profile of Ceph-backed OKD persistent volumes: the "
+            "default 4.0 assumes spinning disks, but Ceph is network-attached, "
+            "so the 1.1 used for local NVMe is too aggressive. Verify by "
+            "benchmarking 1.1/1.5/2.0 rather than adopting this on faith."
         ),
-        safe_sql=validate_safe_sql(f"ALTER SYSTEM SET random_page_cost = {RANDOM_PAGE_COST_TARGET};"),
+        safe_sql=None,  # advisory -- see message; ALTER SYSTEM would shadow the ConfigMap
         confidence=0.7,
         source="tuner",
         parameter_name="random_page_cost",
@@ -124,7 +132,7 @@ def recommend_random_page_cost() -> Suggestion:
 
 
 class ParameterTuner:
-    """DB-backed wrapper: gathers ClusterMetrics from db_alias, computes
+    """Gathers ClusterMetrics from db_alias, computes
     recommendations, and persists any that aren't already pending/approved."""
 
     def __init__(self, db_alias):
