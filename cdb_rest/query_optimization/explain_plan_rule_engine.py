@@ -7,6 +7,8 @@ from typing import Any, Iterable, Optional
 SAFE_SQL_ALLOW = re.compile(
     r"^(CREATE INDEX CONCURRENTLY|ANALYZE|VACUUM|REINDEX CONCURRENTLY"
     r"|SET\s+\w[\w.]*\s*=|ALTER INDEX\s+\S+\s+RENAME TO"
+    r"|ALTER SYSTEM SET\s+\w[\w.]*\s*="
+    r"|ALTER TABLE\s+\"?\w+\"?\s+SET\s*\(\s*autovacuum_vacuum_scale_factor\s*="
     r"|CREATE TEMP TABLE\s+\S+\s+ON COMMIT DROP)\b",
     re.IGNORECASE,
 )
@@ -52,6 +54,7 @@ class Suggestion:
     safe_sql: Optional[str]
     confidence: float
     source: str = "rule_engine"
+    parameter_name: Optional[str] = None
 
 
 class RuleEngine:
@@ -337,7 +340,10 @@ class RuleEngine:
                         "Repeated subquery execution detected across LATERAL iterations. "
                         "Consider temporary table materialization for intermediate lookups."
                     ),
-                    safe_sql=None,
+                    safe_sql=validate_safe_sql(
+                        'CREATE TEMP TABLE _gt_lookup ON COMMIT DROP AS '
+                        'SELECT id, name, status_id FROM "GlobalTag" WHERE name = %(my_gt)s;'
+                    ),
                     confidence=0.7,
                 )
             ]
