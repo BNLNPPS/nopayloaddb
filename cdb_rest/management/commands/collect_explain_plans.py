@@ -12,6 +12,8 @@ from cdb_rest.query_optimization.explain_plan_rule_engine import (
     suggestion_hash,
     validate_safe_sql,
 )
+from cdb_rest.query_optimization.llm_analyzer import analyze_with_llm
+from cdb_rest.query_optimization.llm_backend import get_llm_backend
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.utils import timezone
@@ -38,13 +40,16 @@ class Command(BaseCommand):
         db_alias = options["db_alias"]
         interval = options["interval"]
         once = options["once"]
+        llm_backend = get_llm_backend()
+        if llm_backend is None:
+            logger.info("CDB_LLM_BACKEND unset/unrecognized -- LLM escalation disabled")
 
         while True:
             started_at = timezone.now()
             run_id = None
             try:
                 run_id = self._create_run(db_alias, started_at)
-                seen, explained, stored, failed = self._run_once(db_alias, options, run_id)
+                seen, explained, stored, failed = self._run_once(db_alias, options, run_id, llm_backend)
                 finished_at = timezone.now()
                 duration_ms = int((finished_at - started_at).total_seconds() * 1000)
                 self._finish_run(
@@ -69,7 +74,7 @@ class Command(BaseCommand):
                 break
             time.sleep(interval)
 
-    def _run_once(self, db_alias, options, run_id):
+    def _run_once(self, db_alias, options, run_id, llm_backend=None):
         storage.ensure_schema(db_alias)
 
         candidates = self._fetch_candidates(
@@ -137,6 +142,7 @@ class Command(BaseCommand):
                     total_exec_time=total_exec_time,
                     stddev_exec_time=stddev_exec_time,
                     plan_json=plan_json,
+                    llm_backend=llm_backend,
                 )
             except Exception as exc:
                 failed += 1
@@ -210,6 +216,7 @@ class Command(BaseCommand):
         total_exec_time,
         stddev_exec_time,
         plan_json,
+        llm_backend=None,
     ):
         root = parse_explain_plan(plan_json)
         context = RuleContext(
@@ -227,6 +234,17 @@ class Command(BaseCommand):
             payloadiov_dead_tuple_ratio=self._payloadiov_dead_tuple_ratio(db_alias),
         )
         suggestions = RuleEngine().run(root, context)
+
+        # Layer 3: only escalate to the LLM when all 13 deterministic rules found
+        # nothing. Reaching this method at all already means the plan crossed the
+        # collector's latency/IO threshold, so "still shows elevated latency or
+        # resource consumption" (the proposal's escalation criterion) is already
+        # satisfied -- no separate threshold is needed here.
+        if not suggestions and llm_backend is not None:
+            llm_suggestion = analyze_with_llm(root, context, llm_backend)
+            if llm_suggestion is not None:
+                suggestions = [llm_suggestion]
+
         for s in suggestions:
             storage.store_suggestion(
                 db_alias=db_alias,

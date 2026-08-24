@@ -229,6 +229,14 @@ PERMISSION_PLUGIN_CLASS = os.environ.get(
     'cdb_rest.permissions_plugins.dummy.DummyPermissionPlugin'
 )
 
+# AI optimizer: LLM backend selection (Layer 3 of the analysis engine).
+# '' (default) disables LLM escalation entirely -- the rule engine still runs.
+CDB_LLM_BACKEND = os.environ.get('CDB_LLM_BACKEND', '')
+CDB_OLLAMA_HOST = os.environ.get('CDB_OLLAMA_HOST', 'http://localhost:11434')
+CDB_OLLAMA_MODEL = os.environ.get('CDB_OLLAMA_MODEL', 'llama3.1')
+CDB_OPENAI_API_KEY = os.environ.get('CDB_OPENAI_API_KEY', '')
+CDB_OPENAI_MODEL = os.environ.get('CDB_OPENAI_MODEL', 'gpt-4o-mini')
+
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 
