@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import re
 import time
 
 from cdb_rest.query_optimization import storage
@@ -18,6 +19,7 @@ from django.db import connections
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+GT_LITERAL_RE = re.compile(r'gt\.name\s*=\s*\'([^\']+)\'', re.IGNORECASE)
 
 
 class Command(BaseCommand):
@@ -227,7 +229,8 @@ class Command(BaseCommand):
             shared_blks_hit=shared_blks_hit,
             total_exec_time=total_exec_time,
             stddev_exec_time=stddev_exec_time,
-            has_locked_gt=self._has_locked_global_tag(db_alias),
+            global_tag_name=self._extract_global_tag_name(query_text),
+            has_locked_gt=self._has_locked_global_tag(db_alias, query_text),
             payloadiov_dead_tuple_ratio=self._payloadiov_dead_tuple_ratio(db_alias),
         )
         suggestions = RuleEngine().run(root, context)
@@ -257,17 +260,30 @@ class Command(BaseCommand):
                 suggestion_digest=suggestion_hash(plan_id, s),
             )
 
-    def _has_locked_global_tag(self, db_alias):
+    def _extract_global_tag_name(self, query_text):
+        if not query_text:
+            return None
+        match = GT_LITERAL_RE.search(query_text)
+        return match.group(1) if match else None
+
+    def _has_locked_global_tag(self, db_alias, query_text):
+        gt_name = self._extract_global_tag_name(query_text)
+        if not gt_name:
+            return False
+
         sql = """
             SELECT EXISTS (
                 SELECT 1
-                FROM "GlobalTagStatus"
-                WHERE LOWER(name) = 'locked'
+                FROM "GlobalTag" gt
+                JOIN "GlobalTagStatus" gts
+                  ON gts.id = gt.status_id
+                WHERE gt.name = %s
+                  AND LOWER(gts.name) = 'locked'
             )
         """
         try:
             with connections[db_alias].cursor() as cursor:
-                cursor.execute(sql)
+                cursor.execute(sql, [gt_name])
                 row = cursor.fetchone()
                 return bool(row[0]) if row else False
         except Exception:
