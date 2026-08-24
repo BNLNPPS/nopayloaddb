@@ -34,7 +34,9 @@ The system supports a read/write splitting architecture:
 - **Read Replicas**: ``read_db_1``, ``read_db_2`` - Can handle read operations for improved performance
 - **Database Router**: Routes operations to appropriate databases based on operation type
 
-Currently, all operations route to the ``default`` database, but the infrastructure supports scaling to read replicas.
+ORM-based operations route to the ``default`` database. The main ``/payloadiovs/`` query
+endpoint distributes its raw SQL reads randomly across the configured ``read_db_*``
+replicas (falling back to ``default`` when none are configured).
 
 **Schema Design**
 
@@ -70,10 +72,10 @@ Core Entities
 
 **PayloadIOV**
   Individual payload with its Interval of Validity (IOV), containing:
-  
+
   - Payload URL (reference to actual data file)
   - IOV range (major_iov, minor_iov, major_iov_end, minor_iov_end)
-  - Metadata (checksum, size, description)
+  - Metadata (checksum, size, and an ``extra`` free-form field exposed as ``revision`` in queries)
 
 Validity Model
 ~~~~~~~~~~~~~~~
@@ -87,6 +89,14 @@ Each payload has a validity range defined by:
 - ``comb_iov`` - Combined IOV for efficient indexing
 
 The system supports querying for the appropriate payload based on a specific time point or run number.
+
+**IOV Modes**
+
+The ``CDB_IOV_MODE`` environment variable (``continuous`` by default, or ``discrete``)
+selects the boundary semantics used when validating and attaching IOVs. In continuous mode
+an IOV's end must be strictly greater than its start; in discrete mode equal boundaries are
+allowed and neighboring IOVs are trimmed with a one-unit offset. The strategies live in
+``cdb_rest/iov_comparisons.py``.
 
 API Design
 -----------
@@ -113,20 +123,30 @@ The system provides multiple query endpoints optimized for different use cases:
 Authentication & Security
 --------------------------
 
-**Current State**
-  Authentication is currently disabled for development, but the infrastructure supports:
-  
-  - JWT token authentication
-  - Django REST Framework token auth
-  - Custom authentication backends
+**Authentication**
+  Configured via the ``CDB_AUTH_CLASS`` environment variable. Empty by default, which
+  allows all requests. When set to ``cdb_rest.authentication.CustomJWTAuthentication``,
+  write operations (POST, PUT, PATCH, DELETE) require an HS256 JWT bearer token verified
+  against the ``JWT_SECRET`` environment variable; reads remain anonymous.
+
+**Permission Plugins**
+  Write endpoints additionally consult a permission plugin selected via
+  ``CDB_PERMISSION_PLUGIN_CLASS``:
+
+  - ``DummyPermissionPlugin`` (default) — allows everything
+  - ``Belle2PermissionPlugin`` — matches JWT claims (``b2cdb:admin``,
+    ``b2cdb:createiov``, ``b2cdb:createpayload``) as regular expressions against the
+    target object name
+
+  Custom plugins subclass ``cdb_rest.permissions_plugins.base.BasePermissionPlugin``.
 
 **Production Considerations**
   For production deployment:
-  
-  - Enable authentication in settings
+
+  - Set ``CDB_AUTH_CLASS`` to enable JWT authentication for writes
   - Configure HTTPS/TLS
-  - Set secure SECRET_KEY
-  - Implement proper access controls
+  - Set a secure ``JWT_SECRET``
+  - Configure a permission plugin appropriate for your experiment
 
 Deployment Architecture
 ------------------------
