@@ -12,7 +12,7 @@ jobs:
             - name: launch container
               run: |
                   cd nopayloaddb/
-                  docker-compose up --build -d
+                  docker compose up --build -d
 
             - name: Check out client-side repository
               uses: actions/checkout@v4
@@ -33,4 +33,4 @@ jobs:
               if: failure()   # This ensures the step runs only if a previous step failed
               run: |
                   cd nopayloaddb/
-                  docker-compose logs
+                  docker compose logs
