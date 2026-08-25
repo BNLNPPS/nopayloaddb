@@ -143,7 +143,7 @@ html_theme_options = {
     "use_edit_page_button": True,
     "use_download_button": True,
     "path_to_docs": "docs/source/",
-    "repository_branch": "master",
+    "repository_branch": "main",
     "logo": {
         "image_light": "_static/HSFLogo.png",
         "image_dark": "_static/HSFLogo.png",
@@ -310,7 +310,7 @@ html_context = {
     "github_url": "https://github.com/BNLNPPS/nopayloaddb",
     "github_user": "BNLNPPS",
     "github_repo": "nopayloaddb",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "docs/source",
     
     # Version information
