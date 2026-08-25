@@ -13,6 +13,7 @@ from cdb_rest.views import CDBSettingAPIView
 from cdb_rest.views import TimeoutListAPIView
 from cdb_rest.views import cdb_web_view
 from cdb_rest.views import PayloadListByNameAPIView
+from cdb_rest.query_optimization.api_views import SuggestionListAPIView, SuggestionDetailAPIView
 
 app_name = 'cdb_rest'
 
@@ -51,6 +52,9 @@ urlpatterns = [
     path('user_settings/<str:name>/', CDBSettingAPIView.as_view()),
     path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
     path('web/', cdb_web_view, name="cdb_web"),
+
+    path('ai/suggestions/', SuggestionListAPIView.as_view(), name="ai_suggestions"),
+    path('ai/suggestions/<int:pk>/', SuggestionDetailAPIView.as_view(), name="ai_suggestion_detail"),
 
     # Readable aliases (same views, human-friendly URLs)
     path('global-tags', GlobalTagsListAPIView.as_view(), name="global_tags_list_alias"),
