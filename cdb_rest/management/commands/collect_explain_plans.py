@@ -4,8 +4,9 @@ import logging
 import re
 import time
 
-from cdb_rest.query_optimization import storage
+from cdb_rest.query_optimization import explain_targets, seeds, storage
 from cdb_rest.query_optimization.explain_plan_rule_engine import (
+    PlanNode,
     RuleContext,
     RuleEngine,
     parse_explain_plan,
@@ -21,6 +22,21 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 GT_LITERAL_RE = re.compile(r'gt\.name\s*=\s*\'([^\']+)\'', re.IGNORECASE)
+
+
+def _metrics_only_plan():
+    # Neutral root for unplanned statements; only the metrics rules can fire.
+    return PlanNode(
+        node_type="Not Planned",
+        relation=None,
+        startup_cost=0.0,
+        total_cost=0.0,
+        plan_rows=0,
+        actual_rows=0,
+        actual_time_ms=0.0,
+        shared_hit_blocks=0,
+        shared_read_blocks=0,
+    )
 
 
 class Command(BaseCommand):
@@ -77,6 +93,7 @@ class Command(BaseCommand):
 
     def _run_once(self, db_alias, options, run_id, llm_backend=None):
         storage.ensure_schema(db_alias)
+        self._index_cache = None  # rebuilt each cycle so a new index is seen
 
         candidates = self._fetch_candidates(
             db_alias=db_alias,
@@ -103,36 +120,44 @@ class Command(BaseCommand):
             db_name = row[9]
 
             try:
-                plan_json = self._explain_query(
-                    db_alias=db_alias,
-                    query_text=query_text,
-                    statement_timeout_ms=options["statement_timeout_ms"],
-                )
-                explained += 1
+                # Write-path seeds are tracked on metrics alone; see _metrics_only_plan.
+                if seeds.is_explainable(query_text):
+                    plan_json, explain_mode = self._explain_query(
+                        db_alias=db_alias,
+                        query_text=query_text,
+                        statement_timeout_ms=options["statement_timeout_ms"],
+                    )
+                    explained += 1
 
-                plan_hash = hashlib.sha256(
-                    json.dumps(plan_json, sort_keys=True).encode("utf-8")
-                ).hexdigest()
+                    plan_hash = hashlib.sha256(
+                        json.dumps(plan_json, sort_keys=True).encode("utf-8")
+                    ).hexdigest()
 
-                plan_id, did_store = storage.store_plan(
-                    db_alias=db_alias,
-                    queryid=queryid,
-                    query_text=query_text,
-                    mean_exec_time=mean_exec_time,
-                    calls=calls,
-                    rows_count=rows_count,
-                    shared_blks_read=shared_blks_read,
-                    db_name=db_name,
-                    source=options["source"],
-                    plan_json=plan_json,
-                    plan_hash=plan_hash,
-                )
-                if did_store:
-                    stored += 1
+                    plan_id, did_store = storage.store_plan(
+                        db_alias=db_alias,
+                        queryid=queryid,
+                        query_text=query_text,
+                        mean_exec_time=mean_exec_time,
+                        calls=calls,
+                        rows_count=rows_count,
+                        shared_blks_read=shared_blks_read,
+                        db_name=db_name,
+                        source=f'{options["source"]}:{explain_mode}',
+                        plan_json=plan_json,
+                        plan_hash=plan_hash,
+                    )
+                    if did_store:
+                        stored += 1
+                else:
+                    # Write-path seeds are judged on metrics alone, never planned.
+                    plan_json = None
+                    plan_id = None
+                    explain_mode = None
 
                 self._analyze_and_store_suggestions(
                     db_alias=db_alias,
                     plan_id=plan_id,
+                    explain_mode=explain_mode,
                     queryid=queryid,
                     query_text=query_text,
                     mean_exec_time=mean_exec_time,
@@ -151,37 +176,68 @@ class Command(BaseCommand):
 
         return len(candidates), explained, stored, failed
 
+    # Columns every candidate query returns, in the order the caller unpacks them.
+    _CANDIDATE_COLUMNS = """
+        queryid,
+        query,
+        mean_exec_time,
+        calls,
+        rows,
+        shared_blks_read,
+        shared_blks_hit,
+        total_exec_time,
+        stddev_exec_time,
+        current_database()
+    """
+
     def _fetch_candidates(self, db_alias, min_mean_ms, min_calls, min_shared_blks_read, limit):
-        sql = """
-            SELECT
-                queryid,
-                query,
-                mean_exec_time,
-                calls,
-                rows,
-                shared_blks_read,
-                shared_blks_hit,
-                total_exec_time,
-                stddev_exec_time,
-                current_database()
+        """Seeded fingerprints always, plus the top `limit` threshold-crossers.
+
+        Two queries on purpose: under one shared LIMIT the seeds competed with
+        everything else, and the production LATERAL JOIN is fast enough (~0.06ms)
+        that it ranked ~160th and was evicted every cycle.
+        """
+        seeded_sql = f"""
+            SELECT {self._CANDIDATE_COLUMNS}
+            FROM pg_stat_statements
+            WHERE query ILIKE ANY(%s)
+            ORDER BY mean_exec_time DESC
+        """
+        threshold_sql = f"""
+            SELECT {self._CANDIDATE_COLUMNS}
             FROM pg_stat_statements
             WHERE query ILIKE 'select %%'
-              AND query !~ '\\$[0-9]+'
               AND (mean_exec_time >= %s OR shared_blks_read >= %s)
               AND calls >= %s
+              AND NOT (query ILIKE ANY(%s))
             ORDER BY mean_exec_time DESC
             LIMIT %s
         """
+
         with connections[db_alias].cursor() as cursor:
-            cursor.execute(sql, [min_mean_ms, min_shared_blks_read, min_calls, limit])
-            return cursor.fetchall()
+            cursor.execute(seeded_sql, [seeds.SEED_PATTERNS])
+            seeded = cursor.fetchall()
+
+            cursor.execute(
+                threshold_sql,
+                [min_mean_ms, min_shared_blks_read, min_calls, seeds.SEED_PATTERNS, limit],
+            )
+            threshold = cursor.fetchall()
+
+        # Seeds first so they are never displaced, then dedupe by queryid.
+        seen, candidates = set(), []
+        for row in list(seeded) + list(threshold):
+            key = row[0]
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(row)
+        return candidates
 
     def _explain_query(self, db_alias, query_text, statement_timeout_ms):
-        normalized = query_text.lstrip().lower()
-        if not normalized.startswith("select "):
-            raise ValueError("Only SELECT statements are allowed for EXPLAIN collection")
-        if ";" in query_text:
-            raise ValueError("Semicolons are not allowed in EXPLAIN collection query text")
+        """Plan one statement, returning (plan_json, mode). explain_targets.resolve
+        picks a strategy, since EXPLAIN ANALYZE rejects the stored $1 placeholders."""
+        target = explain_targets.resolve(query_text, db_alias)
 
         with connections[db_alias].cursor() as cursor:
             started_tx = False
@@ -189,7 +245,11 @@ class Command(BaseCommand):
                 cursor.execute("BEGIN READ ONLY")
                 started_tx = True
                 cursor.execute("SET LOCAL statement_timeout = %s", [statement_timeout_ms])
-                cursor.execute(f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query_text}")
+                statement = f"{target.explain_prefix()} {target.sql}"
+                if target.params:
+                    cursor.execute(statement, target.params)
+                else:
+                    cursor.execute(statement)
                 result = cursor.fetchone()
             finally:
                 if started_tx:
@@ -201,12 +261,13 @@ class Command(BaseCommand):
         if result is None:
             raise RuntimeError("No EXPLAIN result returned")
 
-        return result[0]
+        return result[0], target.mode
 
     def _analyze_and_store_suggestions(
         self,
         db_alias,
         plan_id,
+        explain_mode,
         queryid,
         query_text,
         mean_exec_time,
@@ -219,7 +280,15 @@ class Command(BaseCommand):
         plan_json,
         llm_backend=None,
     ):
-        root = parse_explain_plan(plan_json)
+        root = parse_explain_plan(plan_json) if plan_json is not None else _metrics_only_plan()
+
+        # GENERIC_PLAN never executes, so estimate-vs-reality rules must be told.
+        has_actuals = explain_mode in (explain_targets.BOUND_PARAMS, explain_targets.ANALYZE)
+
+        window_calls, window_mean = storage.statement_window(
+            db_alias, queryid, calls, total_exec_time
+        )
+
         context = RuleContext(
             queryid=queryid,
             query_text=query_text,
@@ -233,14 +302,14 @@ class Command(BaseCommand):
             global_tag_name=self._extract_global_tag_name(query_text),
             has_locked_gt=self._has_locked_global_tag(db_alias, query_text),
             payloadiov_dead_tuple_ratio=self._payloadiov_dead_tuple_ratio(db_alias),
+            window_calls=window_calls,
+            window_mean_exec_time=window_mean,
+            has_actuals=has_actuals,
+            existing_indexes=self._existing_indexes(db_alias),
         )
         suggestions = RuleEngine().run(root, context)
 
-        # Layer 3: only escalate to the LLM when all 13 deterministic rules found
-        # nothing. Reaching this method at all already means the plan crossed the
-        # collector's latency/IO threshold, so "still shows elevated latency or
-        # resource consumption" (the proposal's escalation criterion) is already
-        # satisfied -- no separate threshold is needed here.
+        # Escalate only when all 13 deterministic rules found nothing.
         if not suggestions and llm_backend is not None:
             llm_suggestion = analyze_with_llm(root, context, llm_backend)
             if llm_suggestion is not None:
@@ -259,7 +328,25 @@ class Command(BaseCommand):
                 confidence=s.confidence,
                 source=s.source,
                 suggestion_digest=suggestion_hash(plan_id, s),
+                prerequisite=s.prerequisite,
             )
+
+    def _existing_indexes(self, db_alias):
+        """indexdefs on the CDB tables, so a rule does not re-recommend an existing index."""
+        if getattr(self, "_index_cache", None) is not None:
+            return self._index_cache
+        sql = """
+            SELECT indexdef FROM pg_indexes
+            WHERE tablename IN ('PayloadIOV', 'PayloadList', 'GlobalTag')
+        """
+        try:
+            with connections[db_alias].cursor() as cursor:
+                cursor.execute(sql)
+                self._index_cache = tuple(r[0] for r in cursor.fetchall())
+        except Exception:
+            logger.exception("failed to list existing indexes")
+            self._index_cache = ()
+        return self._index_cache
 
     def _extract_global_tag_name(self, query_text):
         if not query_text:
@@ -268,6 +355,7 @@ class Command(BaseCommand):
         return match.group(1) if match else None
 
     def _has_locked_global_tag(self, db_alias, query_text):
+        # Whether the GlobalTag this query reads is locked, not whether any tag anywhere is.
         gt_name = self._extract_global_tag_name(query_text)
         if not gt_name:
             return False
@@ -276,10 +364,9 @@ class Command(BaseCommand):
             SELECT EXISTS (
                 SELECT 1
                 FROM "GlobalTag" gt
-                JOIN "GlobalTagStatus" gts
-                  ON gts.id = gt.status_id
+                JOIN "GlobalTagStatus" s ON s.id = gt.status_id
                 WHERE gt.name = %s
-                  AND LOWER(gts.name) = 'locked'
+                  AND LOWER(s.name) = 'locked'
             )
         """
         try:
