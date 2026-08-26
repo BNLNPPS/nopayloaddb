@@ -34,33 +34,40 @@ The most common operation is querying for payloads based on a Global Tag and IOV
 
 **Response**
 
+The endpoint returns one row per payload list: the latest payload IOV valid at the requested
+point. Each row contains payload type name, payload URL, checksum, size, major IOV,
+minor IOV, major IOV end, minor IOV end, and revision:
+
+.. code-block:: json
+
+   [
+     ["Beam", "D0DXMagnets.dat", "e99a18c428cb38d5f260853678922e03", 1024,
+      0, 999999, 9223372036854775807, 9223372036854775807, null]
+   ]
+
+**Dictionary-Shaped Response**
+
+Add ``shape=dict`` to receive named fields instead of positional rows:
+
+.. code-block:: bash
+
+   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&majorIOV=0&minorIOV=999999&shape=dict'
+
 .. code-block:: json
 
    [
      {
-       "id": 210,
-       "name": "Beam_210",
-       "global_tag": "sPHENIX_ExampleGT_24",
-       "payload_type": "Beam",
-       "payload_iov": [
-         {
-           "id": 13425388,
-           "payload_url": "D0DXMagnets.dat",
-           "major_iov": 0,
-           "minor_iov": 999999,
-           "payload_list": "Beam_210",
-           "created": "2022-02-21T15:28:20.949696"
-         }
-       ],
-       "created": "2022-02-21T15:17:06.481186"
+       "payload_type_name": "Beam",
+       "payload_url": "D0DXMagnets.dat",
+       "checksum": "e99a18c428cb38d5f260853678922e03",
+       "size": 1024,
+       "major_iov": 0,
+       "minor_iov": 999999,
+       "major_iov_end": 9223372036854775807,
+       "minor_iov_end": 9223372036854775807,
+       "revision": null
      }
    ]
-
-**Filter by Payload Type**
-
-.. code-block:: bash
-
-   curl 'http://localhost:8000/api/cdb_rest/payloadiovs/?gtName=sPHENIX_ExampleGT_24&payloadType=Beam&majorIOV=0&minorIOV=999999'
 
 2. Managing Global Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +98,8 @@ The most common operation is querying for payloads based on a Global Tag and IOV
 
 **Create New Global Tag**
 
+The ``status`` field is the **name** of an existing global tag status:
+
 .. code-block:: bash
 
    curl -X POST http://localhost:8000/api/cdb_rest/gt \
@@ -98,9 +107,14 @@ The most common operation is querying for payloads based on a Global Tag and IOV
      -d '{
        "name": "MyNewGT",
        "author": "username",
-       "description": "New global tag for testing",
        "status": "Open"
      }'
+
+**Change Global Tag Status**
+
+.. code-block:: bash
+
+   curl -X PUT http://localhost:8000/api/cdb_rest/gt_change_status/MyNewGT/locked
 
 **Clone Global Tag**
 
@@ -133,32 +147,38 @@ The most common operation is querying for payloads based on a Global Tag and IOV
 
 **Create Payload List**
 
+The name is auto-generated from the payload type name and an internal sequence ID; only the
+payload type name is required. The list is created detached from any global tag:
+
 .. code-block:: bash
 
    curl -X POST http://localhost:8000/api/cdb_rest/pl \
      -H "Content-Type: application/json" \
      -d '{
-       "name": "MyPayloadList_123",
-       "description": "Test payload list",
-       "global_tag": 1,
-       "payload_type": 1
+       "payload_type": "MyPayloadType"
      }'
 
 **Attach Payload List to Global Tag**
 
+Use the generated name returned by the previous call:
+
 .. code-block:: bash
 
-   curl -X POST http://localhost:8000/api/cdb_rest/pl_attach \
+   curl -X PUT http://localhost:8000/api/cdb_rest/pl_attach \
      -H "Content-Type: application/json" \
      -d '{
        "global_tag": "MyGlobalTag",
-       "payload_list": "MyPayloadList_123"
+       "payload_list": "MyPayloadType_123"
      }'
 
 5. Managing Payload IOVs
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Create Single Payload IOV**
+
+The IOV is created detached; attach it to a payload list in a second step. End IOVs default
+to ``sys.maxsize`` (open-ended) when omitted. Range validation depends on ``CDB_IOV_MODE``
+(``continuous`` by default — end must be strictly greater than start):
 
 .. code-block:: bash
 
@@ -171,12 +191,27 @@ The most common operation is querying for payloads based on a Global Tag and IOV
        "major_iov": 0,
        "minor_iov": 1000,
        "major_iov_end": 0,
-       "minor_iov_end": 2000,
-       "payload_list": 1,
-       "description": "Calibration data for run 1000-2000"
+       "minor_iov_end": 2000
+     }'
+
+**Attach Payload IOV to a Payload List**
+
+Overlapping IOVs in the list are split or trimmed if the global tag is unlocked; conflicting
+IOVs are rejected if the global tag is locked:
+
+.. code-block:: bash
+
+   curl -X PUT http://localhost:8000/api/cdb_rest/piov_attach \
+     -H "Content-Type: application/json" \
+     -d '{
+       "payload_list": "MyPayloadType_123",
+       "piov_id": 1
      }'
 
 **Bulk Create Payload IOVs**
+
+Bulk-created IOVs are attached directly to a payload list (by name) and are always
+open-ended (end IOVs set to ``sys.maxsize``):
 
 .. code-block:: bash
 
@@ -185,23 +220,28 @@ The most common operation is querying for payloads based on a Global Tag and IOV
      -d '[
        {
          "payload_url": "data1.root",
-         "checksum": "sha256:1111...",
          "major_iov": 0,
          "minor_iov": 1000,
-         "major_iov_end": 0,
-         "minor_iov_end": 1500,
-         "payload_list": 1
+         "payload_list": "MyPayloadType_123"
        },
        {
          "payload_url": "data2.root",
-         "checksum": "sha256:2222...",
          "major_iov": 0,
          "minor_iov": 1500,
-         "major_iov_end": 0,
-         "minor_iov_end": 2000,
-         "payload_list": 1
+         "payload_list": "MyPayloadType_123"
        }
      ]'
+
+6. Reading Server Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Any ``CDB_*`` environment variable set on the server can be read through the settings
+endpoint:
+
+.. code-block:: bash
+
+   curl http://localhost:8000/api/cdb_rest/user_settings/CDB_IOV_MODE/
+   # {"CDB_IOV_MODE": "continuous"}
 
 Best Practices
 --------------
@@ -250,12 +290,14 @@ Common HTTP Status Codes
 
 **Example Error Response**
 
+Errors are returned as a single ``detail`` field. Note that most business-logic errors
+(missing resources, locked/frozen global tags, IOV conflicts) currently return status
+``500``:
+
 .. code-block:: json
 
    {
-     "error": "Global tag not found",
-     "code": 404,
-     "details": "Global tag 'NonExistentGT' does not exist"
+     "detail": "GlobalTag NonExistentGT doesn't exist"
    }
 
 Troubleshooting
@@ -272,8 +314,10 @@ Common Issues
 
 **Authentication Errors**
 
-- Verify that authentication is properly configured if enabled
-- Check that valid tokens are being sent in requests
+- Write operations (POST/PUT/PATCH/DELETE) require a JWT bearer token when ``CDB_AUTH_CLASS`` is set
+- Verify the token is signed with the server's ``JWT_SECRET`` (HS256) and not expired
+- A ``403 Permission denied`` on writes indicates the configured permission plugin
+  (``CDB_PERMISSION_PLUGIN_CLASS``) rejected the request for that global tag or payload list
 
 **Database Connection Issues**
 
@@ -321,27 +365,24 @@ Python Client Example
            self.base_url = base_url.rstrip('/')
            self.api_base = f"{self.base_url}/api/cdb_rest"
        
-       def get_payloads(self, gt_name, major_iov, minor_iov, payload_type=None):
+       def get_payloads(self, gt_name, major_iov, minor_iov):
            """Get payloads for a specific global tag and IOV."""
            params = {
                'gtName': gt_name,
                'majorIOV': major_iov,
-               'minorIOV': minor_iov
+               'minorIOV': minor_iov,
+               'shape': 'dict'  # get named fields instead of positional rows
            }
-           if payload_type:
-               params['payloadType'] = payload_type
-           
            response = requests.get(f"{self.api_base}/payloadiovs/", params=params)
            response.raise_for_status()
            return response.json()
-       
-       def create_global_tag(self, name, author, description, status_id):
+
+       def create_global_tag(self, name, author, status='unlocked'):
            """Create a new global tag."""
            data = {
                'name': name,
                'author': author,
-               'description': description,
-               'status': status_id
+               'status': status  # status name, must exist in /gtstatus
            }
            response = requests.post(f"{self.api_base}/gt", json=data)
            response.raise_for_status()

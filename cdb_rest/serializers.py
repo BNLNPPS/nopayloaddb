@@ -93,3 +93,52 @@ class PayloadListReadShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = PayloadList
         fields = ("payload_type", "name")
+
+
+# ── Browse serializers (lightweight, for paginated endpoints) ────────────────
+
+class GlobalTagBrowseSerializer(serializers.ModelSerializer):
+    """GT list item for paginated browsing; counts come from queryset annotations."""
+
+    status = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    payload_lists_count = serializers.IntegerField(read_only=True, default=0)
+    payload_iov_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = GlobalTag
+        fields = ("id", "name", "author", "status", "payload_lists_count", "payload_iov_count", "created", "updated")
+
+
+class PayloadListBrowseSerializer(serializers.ModelSerializer):
+    """PayloadList without nested IOVs; iov_count comes from queryset annotation."""
+
+    global_tag = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    iov_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = PayloadList
+        fields = ("id", "name", "global_tag", "payload_type", "iov_count", "created")
+
+
+class PayloadIOVBrowseSerializer(serializers.ModelSerializer):
+    """Flat PayloadIOV row with payload list / global tag / payload type names."""
+
+    payload_list = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    global_tag = serializers.SerializerMethodField()
+    payload_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PayloadIOV
+        fields = ("id", "payload_url", "checksum", "major_iov", "minor_iov",
+                  "major_iov_end", "minor_iov_end", "payload_list", "global_tag", "payload_type", "inserted")
+
+    @staticmethod
+    def get_global_tag(obj):
+        pl = obj.payload_list
+        return pl.global_tag.name if pl and pl.global_tag else None
+
+    @staticmethod
+    def get_payload_type(obj):
+        pl = obj.payload_list
+        return pl.payload_type.name if pl and pl.payload_type else None
