@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import re
 import time
 
 from cdb_rest.query_optimization import explain_targets, seeds, storage
@@ -20,6 +21,7 @@ from django.db import connections
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+GT_LITERAL_RE = re.compile(r'gt\.name\s*=\s*\'([^\']+)\'', re.IGNORECASE)
 
 
 def _metrics_only_plan():
@@ -297,7 +299,8 @@ class Command(BaseCommand):
             shared_blks_hit=shared_blks_hit,
             total_exec_time=total_exec_time,
             stddev_exec_time=stddev_exec_time,
-            has_locked_gt=self._has_locked_global_tag(db_alias),
+            global_tag_name=self._extract_global_tag_name(query_text),
+            has_locked_gt=self._has_locked_global_tag(db_alias, query_text),
             payloadiov_dead_tuple_ratio=self._payloadiov_dead_tuple_ratio(db_alias),
             window_calls=window_calls,
             window_mean_exec_time=window_mean,
@@ -345,19 +348,30 @@ class Command(BaseCommand):
             self._index_cache = ()
         return self._index_cache
 
-    def _has_locked_global_tag(self, db_alias):
-        # Whether a GlobalTag is actually locked, not whether the status row exists.
+    def _extract_global_tag_name(self, query_text):
+        if not query_text:
+            return None
+        match = GT_LITERAL_RE.search(query_text)
+        return match.group(1) if match else None
+
+    def _has_locked_global_tag(self, db_alias, query_text):
+        # Whether the GlobalTag this query reads is locked, not whether any tag anywhere is.
+        gt_name = self._extract_global_tag_name(query_text)
+        if not gt_name:
+            return False
+
         sql = """
             SELECT EXISTS (
                 SELECT 1
                 FROM "GlobalTag" gt
                 JOIN "GlobalTagStatus" s ON s.id = gt.status_id
-                WHERE LOWER(s.name) = 'locked'
+                WHERE gt.name = %s
+                  AND LOWER(s.name) = 'locked'
             )
         """
         try:
             with connections[db_alias].cursor() as cursor:
-                cursor.execute(sql)
+                cursor.execute(sql, [gt_name])
                 row = cursor.fetchone()
                 return bool(row[0]) if row else False
         except Exception:
