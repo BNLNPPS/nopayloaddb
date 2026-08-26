@@ -45,8 +45,9 @@ urlpatterns = [
     path('pl_attach', PayloadListAttachAPIView.as_view(), name="payload_list_attach"),
     path('piov_attach', PayloadIOVAttachAPIView.as_view(), name="payload_iov_list_attach"),
 
-    #path('payloadiovs_orm_orderby/', PayloadIOVsORMOrderByListAPIView.as_view(), name="payloadiovs_orm_orderby"),
-    #path('payloadiovs_orm_max/', PayloadIOVsORMMaxListAPIView.as_view(), name="payloadiovs_orm_max"),
+    # The three IOV lookup strategies bench/ compares; the ORM ones are for comparison only.
+    path('payloadiovs_orm_orderby/', PayloadIOVsORMOrderByListAPIView.as_view(), name="payloadiovs_orm_orderby"),
+    path('payloadiovs_orm_max/', PayloadIOVsORMMaxListAPIView.as_view(), name="payloadiovs_orm_max"),
     # path('payloadiovsrange/', PayloadIOVsRangesListAPIView.as_view(), name="payload_ranges_list"),
     path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
     path('user_settings/<str:name>/', CDBSettingAPIView.as_view()),
