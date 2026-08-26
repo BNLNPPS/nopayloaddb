@@ -229,9 +229,16 @@ class TestWindowedHotness:
                                                     stddev_exec_time=1.0))
 
     def test_r9_needs_a_really_locked_global_tag(self):
-        base = dict(query_text="SELECT * FROM PayloadIOV", window_calls=5000)
+        base = dict(query_text="SELECT * FROM PayloadIOV", window_calls=5000,
+                    global_tag_name="gt_1")
         assert "R9" not in fire(node("Result"), ctx(has_locked_gt=False, **base))
         assert "R9" in fire(node("Result"), ctx(has_locked_gt=True, **base))
+
+    def test_r9_needs_to_know_which_global_tag(self):
+        # The suggestion names the tag, so an unattributable query gets no advice.
+        base = dict(query_text="SELECT * FROM PayloadIOV", window_calls=5000,
+                    has_locked_gt=True)
+        assert "R9" not in fire(node("Result"), ctx(global_tag_name=None, **base))
 
     def test_r12_uses_the_window_mean(self):
         text = "INSERT INTO GlobalTag ... PayloadList ..."

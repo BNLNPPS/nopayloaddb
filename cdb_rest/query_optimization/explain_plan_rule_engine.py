@@ -55,6 +55,7 @@ class RuleContext:
     shared_blks_hit: int
     total_exec_time: float
     stddev_exec_time: float
+    global_tag_name: Optional[str] = None
     has_locked_gt: bool = False
     payloadiov_dead_tuple_ratio: float = 0.0
 
@@ -375,7 +376,8 @@ class RuleEngine:
         return []
 
     def _rule_r9_locked_gt_high_read_volume(self, context: RuleContext) -> list[Suggestion]:
-        if (context.has_locked_gt and context.hot_calls() > 1000
+        if (context.global_tag_name and context.has_locked_gt
+                and context.hot_calls() > 1000
                 and "PAYLOADIOV" in context.query_text.upper()):
             return [
                 Suggestion(
@@ -383,8 +385,9 @@ class RuleEngine:
                     category="MATERIALIZED_VIEW",
                     priority="MEDIUM",
                     message=(
-                        "High read volume with locked GlobalTag detected. Consider precomputing "
-                        "latest valid IOV per PayloadType via materialized view."
+                        f"High read volume for locked GlobalTag '{context.global_tag_name}' "
+                        "detected. Consider precomputing latest valid IOV per PayloadType "
+                        "via materialized view."
                     ),
                     safe_sql=None,
                     confidence=0.8,

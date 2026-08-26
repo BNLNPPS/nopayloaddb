@@ -61,18 +61,18 @@ GLOBAL_TAGS = [
 ]
 
 IOVS = [
-    {"payload_url": "alignment_v1.root",       "type": "Alignment",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 100,  "minor_iov_end": 0},
-    {"payload_url": "alignment_v2.root",       "type": "Alignment",      "major_iov": 100, "minor_iov": 0, "major_iov_end": 200,  "minor_iov_end": 0},
-    {"payload_url": "calibration_run1.dat",    "type": "Calibration",    "major_iov": 0,   "minor_iov": 0, "major_iov_end": 50,   "minor_iov_end": 0},
-    {"payload_url": "calibration_run2.dat",    "type": "Calibration",    "major_iov": 50,  "minor_iov": 0, "major_iov_end": 150,  "minor_iov_end": 0},
-    {"payload_url": "fieldmap_3d.root",        "type": "FieldMap",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0},
-    {"payload_url": "geometry_v1.xml",         "type": "Geometry",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0},
-    {"payload_url": "beam_params_2024.json",   "type": "BeamParameters", "major_iov": 0,   "minor_iov": 0, "major_iov_end": 500,  "minor_iov_end": 0},
-    {"payload_url": "trigger_default.json",    "type": "TriggerConfig",  "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0},
-    {"payload_url": "daq_config_v3.json",      "type": "DAQConfig",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0},
-    {"payload_url": "reco_params_2024.root",   "type": "RecoConfig",     "major_iov": 0,   "minor_iov": 0, "major_iov_end": 300,  "minor_iov_end": 0},
-    {"payload_url": "sim_config_mc.json",      "type": "SimConfig",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0},
-    {"payload_url": "noise_map_summer.root",   "type": "NoiseMap",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 200,  "minor_iov_end": 0},
+    {"payload_url": "alignment_v1.root",       "type": "Alignment",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 100,  "minor_iov_end": 0, "checksum": "a1b2c3d4e5f6"},
+    {"payload_url": "alignment_v2.root",       "type": "Alignment",      "major_iov": 100, "minor_iov": 0, "major_iov_end": 200,  "minor_iov_end": 0, "checksum": "b2c3d4e5f6a1"},
+    {"payload_url": "calibration_run1.dat",    "type": "Calibration",    "major_iov": 0,   "minor_iov": 0, "major_iov_end": 50,   "minor_iov_end": 0, "checksum": "c3d4e5f6a1b2"},
+    {"payload_url": "calibration_run2.dat",    "type": "Calibration",    "major_iov": 50,  "minor_iov": 0, "major_iov_end": 150,  "minor_iov_end": 0, "checksum": "d4e5f6a1b2c3"},
+    {"payload_url": "fieldmap_3d.root",        "type": "FieldMap",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0, "checksum": "e5f6a1b2c3d4"},
+    {"payload_url": "geometry_v1.xml",         "type": "Geometry",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0, "checksum": "f6a1b2c3d4e5"},
+    {"payload_url": "beam_params_2024.json",   "type": "BeamParameters", "major_iov": 0,   "minor_iov": 0, "major_iov_end": 500,  "minor_iov_end": 0, "checksum": "1a2b3c4d5e6f"},
+    {"payload_url": "trigger_default.json",    "type": "TriggerConfig",  "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0, "checksum": "2b3c4d5e6f1a"},
+    {"payload_url": "daq_config_v3.json",      "type": "DAQConfig",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0, "checksum": "3c4d5e6f1a2b"},
+    {"payload_url": "reco_params_2024.root",   "type": "RecoConfig",     "major_iov": 0,   "minor_iov": 0, "major_iov_end": 300,  "minor_iov_end": 0, "checksum": "4d5e6f1a2b3c"},
+    {"payload_url": "sim_config_mc.json",      "type": "SimConfig",      "major_iov": 0,   "minor_iov": 0, "major_iov_end": 9999, "minor_iov_end": 0, "checksum": "5e6f1a2b3c4d"},
+    {"payload_url": "noise_map_summer.root",   "type": "NoiseMap",       "major_iov": 0,   "minor_iov": 0, "major_iov_end": 200,  "minor_iov_end": 0, "checksum": "6f1a2b3c4d5e"},
 ]
 
 
@@ -82,13 +82,13 @@ def populate():
     # 1. Create statuses
     print("Creating statuses...")
     for s in STATUSES:
-        result = post("gtstatus", {"name": s})
+        result = post("global-tags/statuses", {"name": s})
         print(f"  {s}: id={result.get('id', '?')}")
 
     # 2. Create payload types
     print("\nCreating payload types...")
     for pt in PAYLOAD_TYPES:
-        result = post("pt", {"name": pt})
+        result = post("payload-types", {"name": pt})
         print(f"  {pt}: id={result.get('id', '?')}")
 
     # 3. Create GTs, payload lists, and attach
@@ -101,15 +101,15 @@ def populate():
         print(f"\n  GT: {gt['name']}")
 
         for pt_name in gt["types"]:
-            pl = post("pl", {"payload_type": pt_name})
+            pl = post("payload-lists", {"payload_type": pt_name})
             if not pl:
                 continue
-            put("pl_attach", {"global_tag": gt["name"], "payload_list": pl["name"]})
+            put("payload-lists/attach", {"global_tag": gt["name"], "payload_list": pl["name"]})
             print(f"    + {pl.get('name', '?')} ({pt_name})")
 
         # Set final status
         if target_status != "unlocked":
-            put(f"gt_change_status/{gt['name']}/{target_status}", {})
+            put(f"global-tags/{gt['name']}/change-status/{target_status}", {})
             print(f"    -> status: {target_status}")
 
     # 4. Create IOVs and attach to first GT that has the matching type
@@ -117,13 +117,14 @@ def populate():
     gt_payload_lists = {}
     for gt in GLOBAL_TAGS:
         if gt["types"]:
-            pl_data = get(f"gtPayloadLists/{gt['name']}")
+            pl_data = get(f"global-tags/{gt['name']}/payload-lists")
             if pl_data:
                 gt_payload_lists[gt["name"]] = pl_data
 
     for iov_def in IOVS:
-        piov = post("piov", {
+        piov = post("payload-iovs", {
             "payload_url": iov_def["payload_url"],
+            "checksum": iov_def["checksum"],
             "major_iov": iov_def["major_iov"],
             "minor_iov": iov_def["minor_iov"],
             "major_iov_end": iov_def["major_iov_end"],
@@ -139,7 +140,7 @@ def populate():
             pls = gt_payload_lists.get(gt["name"], {})
             pl_name = pls.get(iov_def["type"])
             if pl_name:
-                put("piov_attach", {"payload_list": pl_name, "piov_id": piov["id"]})
+                put("payload-iovs/attach", {"payload_list": pl_name, "piov_id": piov["id"]})
                 print(f"  {iov_def['payload_url']} -> {pl_name} ({gt['name']})")
                 break
 
@@ -147,7 +148,7 @@ def populate():
     print("\n" + "=" * 60)
     print("Summary")
     print("=" * 60)
-    gts_data = get("globalTags")
+    gts_data = get("global-tags")
     if isinstance(gts_data, list):
         fmt = "{:<30} {:<10} {:>4} {:>5}"
         print(fmt.format("Name", "Status", "PLs", "IOVs"))
@@ -156,8 +157,8 @@ def populate():
             print(fmt.format(gt["name"], gt["status"], gt["payload_lists_count"], gt["payload_iov_count"]))
         print(f"\nTotal: {len(gts_data)} Global Tags")
 
-    pts_data = get("pt")
-    pls_data = get("pl")
+    pts_data = get("payload-types")
+    pls_data = get("payload-lists")
     if isinstance(pts_data, list):
         print(f"Total: {len(pts_data)} Payload Types")
     if isinstance(pls_data, list):
@@ -165,13 +166,12 @@ def populate():
 
     # Readback test
     print("\nReadback test:")
-    result = get("payloadiovs/", {"gtName": "Production_2024", "majorIOV": 0, "minorIOV": 0})
+    result = get("payload-iovs/query/", {"gtName": "Production_2024", "majorIOV": 0, "minorIOV": 0})
     if isinstance(result, list):
-        print(f"  payloadiovs for Production_2024 @ (0,0): {len(result)} results")
+        print(f"  payload-iovs for Production_2024 @ (0,0): {len(result)} results")
     else:
-        print(f"  payloadiovs response: {result}")
+        print(f"  payload-iovs response: {result}")
 
 
 if __name__ == "__main__":
     populate()
-
