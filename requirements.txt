@@ -9,7 +9,7 @@ PyJWT==2.6.0
 pytz==2023.3
 requests>=2.28
 sqlparse==0.4.3
-typing_extensions==4.5.0
+typing_extensions>=4.6
 # Documentation
 sphinx_book_theme>=1.1
 sphinxcontrib-django==2.5
