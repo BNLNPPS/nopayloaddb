@@ -28,7 +28,7 @@ jobs:
         run: sudo apt-get install -y postgresql-client
       - name: Test PostgreSQL Connection
         run: psql "host=localhost user=login dbname=dbname password=password"
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: nopayloaddb
       - name: Install Dependencies
