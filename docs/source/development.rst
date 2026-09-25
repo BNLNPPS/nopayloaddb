@@ -191,7 +191,7 @@ To trace SQL while debugging performance:
 Contributing
 ------------
 
-1. Create a feature branch from ``master``.
+1. Create a feature branch from ``main``.
 2. Make your changes, following the surrounding code style (PEP 8, Django conventions),
    with tests where appropriate.
 3. Ensure the test suite passes and update the documentation if behavior changed.
