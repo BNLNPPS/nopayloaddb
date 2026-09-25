@@ -52,6 +52,7 @@ urlpatterns = [
     path('payloadiovs/', PayloadIOVsSQLListAPIView.as_view(), name="payloadiovs"),
     path('user_settings/<str:name>/', CDBSettingAPIView.as_view()),
     path('timeout', TimeoutListAPIView.as_view(), name="timeout"),
+    path('timeout/<int:seconds>', TimeoutListAPIView.as_view(), name="timeout_seconds"),
     path('web/', cdb_web_view, name="cdb_web"),
 
     path('ai/suggestions/', SuggestionListAPIView.as_view(), name="ai_suggestions"),
