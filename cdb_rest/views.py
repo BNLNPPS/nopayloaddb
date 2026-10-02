@@ -1137,6 +1137,40 @@ class CDBSettingAPIView(WriteAuthMixin, APIView):
         return Response({name: value})
 
 
+class AuthDecisionAPIView(APIView):
+    """Authorization decision endpoint for nginx auth_request subrequests.
+
+    nginx passes the original request's method and URI in the
+    X-Original-Method and X-Original-URI headers. Reads are always allowed,
+    file uploads (PUT) require authentication and the permission plugin's
+    approval, and any other method is denied. Returns 200 to allow,
+    401/403 to deny; no response body is needed.
+    """
+
+    def get_authenticators(self):
+        if self.request and self.request.headers.get('X-Original-Method', 'GET') == 'PUT':
+            auth_class = load_auth_class()
+            if auth_class:
+                return [auth_class()]
+        return []
+
+    def get(self, request):
+        method = request.headers.get('X-Original-Method', 'GET')
+        if method in ('GET', 'HEAD'):
+            return Response(status=status.HTTP_200_OK)
+        if method != 'PUT':
+            # only file uploads are allowed; deletion or anything else is denied
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        plugin = load_permission_plugin()
+        uri = request.headers.get('X-Original-URI', '')
+        file_name = uri.split('?')[0].rstrip('/').rsplit('/', 1)[-1]
+        target_object = {"object": "PayloadStorage", "role": "admin", "name": file_name}
+        if not plugin.has_permission(request, target_object):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        return Response(status=status.HTTP_200_OK)
+
+
 # ── Web views ────────────────────────────────────────────────────────────────
 
 def cdb_web_view(request):

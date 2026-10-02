@@ -27,6 +27,11 @@ class Belle2PermissionPlugin(BasePermissionPlugin):
 
                 if match_found:
                     return True
-            
-                   
+
+
             return False
+
+        if context.get("object") in ("PayloadStorage"):
+            # file upload: allowed for any authenticated user (valid JWT),
+            # the authentication class has already verified the token
+            return True

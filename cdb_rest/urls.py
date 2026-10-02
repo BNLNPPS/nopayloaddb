@@ -13,6 +13,7 @@ from cdb_rest.views import GlobalTagCloneAPIView
 from cdb_rest.views import CDBSettingAPIView
 from cdb_rest.views import TimeoutListAPIView
 from cdb_rest.views import cdb_web_view
+from cdb_rest.views import AuthDecisionAPIView
 from cdb_rest.views import PayloadListByNameAPIView
 
 app_name = 'cdb_rest'
@@ -76,4 +77,7 @@ urlpatterns = [
     path('payload-iovs/<str:globalTagName>/<str:payloadType>/<int:major_iov>/<int:minor_iov>/delete', PayloadIOVDeleteAPIView.as_view(), name="payloadiov_delete_alias"),
     path('payload-iovs/<str:globalTagName>/<str:payloadType>/<int:major_iov>/<int:minor_iov>/<int:major_iov_end>/<int:minor_iov_end>/delete', PayloadIOVDeleteAPIView.as_view(), name="payloadiov_delete_range_alias"),
     path('settings/<str:name>/', CDBSettingAPIView.as_view(), name="settings_alias"),
+
+    # Authorization decision for nginx auth_request (payload file writes)
+    path('auth/decision', AuthDecisionAPIView.as_view(), name="auth_decision"),
 ]
