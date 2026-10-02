@@ -5,7 +5,8 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction, connections
-from django.db.models import Prefetch, Q, Max, Count
+from django.db.models import Prefetch, Q, Max, Count, OuterRef, Subquery, IntegerField
+from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, render
 
@@ -360,8 +361,18 @@ class GlobalTagsDetailedListAPIView(WriteAuthMixin, ListAPIView):
     serializer_class = GlobalTagDetailedSerializer
 
     def get_queryset(self):
+        # Count IOVs per tag in an indexed subquery instead of grouping the
+        # full GlobalTag x PayloadList x PayloadIOV join.
+        iov_counts = (
+            PayloadIOV.objects
+            .filter(payload_list__global_tag_id=OuterRef('pk'))
+            .order_by()
+            .values('payload_list__global_tag_id')
+            .annotate(c=Count('pk'))
+            .values('c')
+        )
         return GlobalTag.objects.select_related('status').annotate(
-            payload_count=Count('payload_lists__payload_iov', distinct=True),
+            payload_count=Coalesce(Subquery(iov_counts, output_field=IntegerField()), 0),
         )
 
 
