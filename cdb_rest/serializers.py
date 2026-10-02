@@ -86,6 +86,18 @@ class GlobalTagListSerializer(serializers.ModelSerializer):
         return PayloadIOV.objects.filter(payload_list__in=obj.payload_lists.all()).count()
 
 
+class GlobalTagDetailedSerializer(serializers.ModelSerializer):
+    """GlobalTag with status name and payload count; payload_count comes from a queryset annotation."""
+
+    status = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    payload_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = GlobalTag
+        fields = ("id", "name", "author", "description", "status",
+                  "payload_count", "created", "updated")
+
+
 class PayloadListReadShortSerializer(serializers.ModelSerializer):
 
     payload_type = serializers.SlugRelatedField(slug_field="name", read_only=True)

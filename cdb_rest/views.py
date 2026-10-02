@@ -23,7 +23,7 @@ from cdb_rest.models import (
 )
 from cdb_rest.serializers import (
     GlobalTagCreateSerializer, GlobalTagReadSerializer,
-    GlobalTagStatusSerializer, GlobalTagListSerializer,
+    GlobalTagStatusSerializer, GlobalTagListSerializer, GlobalTagDetailedSerializer,
     PayloadListCreateSerializer, PayloadListReadSerializer,
     PayloadTypeSerializer, PayloadIOVSerializer,
     PayloadListSerializer, PayloadListReadShortSerializer,
@@ -353,6 +353,16 @@ class GlobalTagsListAPIView(WriteAuthMixin, ListAPIView):
         queryset = self.get_queryset()
         serializer = GlobalTagListSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class GlobalTagsDetailedListAPIView(WriteAuthMixin, ListAPIView):
+    """List all GlobalTags with status name and per-tag payload counts."""
+    serializer_class = GlobalTagDetailedSerializer
+
+    def get_queryset(self):
+        return GlobalTag.objects.select_related('status').annotate(
+            payload_count=Count('payload_lists__payload_iov', distinct=True),
+        )
 
 
 class GlobalTagsPayloadListsListAPIView(WriteAuthMixin, ListAPIView):

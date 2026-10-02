@@ -1,6 +1,7 @@
 from django.urls import path
 from cdb_rest.views import GlobalTagListCreationAPIView, GlobalTagDetailAPIView, GlobalTagStatusCreationAPIView
-from cdb_rest.views import GlobalTagsListAPIView, GlobalTagsPayloadListsListAPIView, GlobalTagByNameDetailAPIView
+from cdb_rest.views import GlobalTagsListAPIView, GlobalTagsPayloadListsListAPIView, GlobalTagByNameDetailAPIView,\
+    GlobalTagsDetailedListAPIView
 from cdb_rest.views import PayloadListListCreationAPIView, PayloadTypeListCreationAPIView,\
     PayloadIOVListCreationAPIView, PayloadListDetailAPIView
 from cdb_rest.views import PayloadIOVsORMMaxListAPIView, PayloadIOVsORMOrderByListAPIView, PayloadIOVsSQLListAPIView,\
@@ -53,7 +54,7 @@ urlpatterns = [
     path('web/', cdb_web_view, name="cdb_web"),
 
     # Readable aliases (same views, human-friendly URLs)
-    path('global-tags', GlobalTagsListAPIView.as_view(), name="global_tags_list_alias"),
+    path('global-tags', GlobalTagsDetailedListAPIView.as_view(), name="global_tags_list_alias"),
     path('global-tags/statuses', GlobalTagStatusCreationAPIView.as_view(), name="global_tag_status_alias"),
     path('global-tags/<str:globalTagName>', GlobalTagByNameDetailAPIView.as_view(), name="global_tag_by_name_alias"),
     path('global-tags/<str:globalTagName>/payload-lists', GlobalTagsPayloadListsListAPIView.as_view(), name="gt_payload_lists_alias"),
