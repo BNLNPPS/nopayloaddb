@@ -1,6 +1,7 @@
 import sys
 import time
 import random
+import logging
 from decimal import Decimal
 
 from django.conf import settings
@@ -34,6 +35,8 @@ from cdb_rest.serializers import (
 import cdb_rest.queries
 from .iov_comparisons import get_iov_config, compute_comb_iov
 from .utils import load_permission_plugin, load_auth_class
+
+logger = logging.getLogger(__name__)
 
 
 class WriteAuthMixin:
@@ -1152,22 +1155,47 @@ class AuthDecisionAPIView(APIView):
             auth_class = load_auth_class()
             if auth_class:
                 return [auth_class()]
+            logger.warning("auth decision: CDB_AUTH_CLASS not set, PUT requests are not authenticated")
         return []
+
+    def handle_exception(self, exc):
+        # authentication failures (missing/invalid/expired token) are raised
+        # before get() runs; log them here with the original request context
+        response = super().handle_exception(exc)
+        if response.status_code in (401, 403):
+            logger.warning(
+                "auth decision: DENY %s method=%s uri=%s client=%s reason=%s",
+                response.status_code,
+                self.request.headers.get('X-Original-Method', 'GET'),
+                self.request.headers.get('X-Original-URI', ''),
+                self.request.META.get('REMOTE_ADDR', ''),
+                exc,
+            )
+        return response
 
     def get(self, request):
         method = request.headers.get('X-Original-Method', 'GET')
+        uri = request.headers.get('X-Original-URI', '')
+        claims = getattr(request.user, 'claims', None) or {}
+        subject = claims.get('sub') or claims.get('username') or 'anonymous'
+
         if method in ('GET', 'HEAD'):
+            logger.debug("auth decision: ALLOW read uri=%s", uri)
             return Response(status=status.HTTP_200_OK)
         if method != 'PUT':
             # only file uploads are allowed; deletion or anything else is denied
+            logger.warning("auth decision: DENY method=%s uri=%s user=%s (only PUT is allowed)",
+                           method, uri, subject)
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         plugin = load_permission_plugin()
-        uri = request.headers.get('X-Original-URI', '')
         file_name = uri.split('?')[0].rstrip('/').rsplit('/', 1)[-1]
         target_object = {"object": "PayloadStorage", "role": "admin", "name": file_name}
         if not plugin.has_permission(request, target_object):
+            logger.warning("auth decision: DENY upload file=%s uri=%s user=%s (permission plugin)",
+                           file_name, uri, subject)
             return Response(status=status.HTTP_403_FORBIDDEN)
+        logger.info("auth decision: ALLOW upload file=%s uri=%s user=%s", file_name, uri, subject)
         return Response(status=status.HTTP_200_OK)
 
 
